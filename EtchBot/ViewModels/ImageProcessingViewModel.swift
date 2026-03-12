@@ -1,0 +1,194 @@
+// ImageProcessingViewModel.swift — EtchBot
+// Drives the image-to-drawing pipeline: preprocessing → stippling → TSP → encoding.
+// Publishes intermediate results for the editor UI.
+
+import Foundation
+import UIKit
+import Combine
+
+@MainActor
+public final class ImageProcessingViewModel: ObservableObject {
+
+    // MARK: — Published state
+    @Published public var sourceImage: UIImage?
+    @Published public var previewImage: UIImage?  // Line drawing rendered as UIImage
+    @Published public var stipplePoints: [StipplePoint]?
+    @Published public var drawingPath: DrawingPath?
+    @Published public var settings: DrawingSettings = .defaults
+    @Published public var isProcessing: Bool = false
+    @Published public var processingProgress: Double = 0
+    @Published public var currentPhase: ProcessingPhase = .preprocessing
+    @Published public var processingDetail: String = ""
+    @Published public var showPhotoPicker: Bool = false
+    @Published public var transferError: String?
+
+    // MARK: — Private
+    private var debounceTask: Task<Void, Never>?
+    private var processingTask: Task<Void, Never>?
+    private var calibration: CalibrationData = .defaults
+
+    // MARK: — Source image management
+
+    public func setSourceImage(_ image: UIImage) {
+        sourceImage = image
+        stipplePoints = nil
+        drawingPath = nil
+        previewImage = nil
+        Task { await processImage() }
+    }
+
+    public func updateCalibration(_ calibration: CalibrationData) {
+        self.calibration = calibration
+    }
+
+    // MARK: — Debounced reprocess (called when settings change)
+
+    public func reprocessDebounced() {
+        debounceTask?.cancel()
+        debounceTask = Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            await processImage()
+        }
+    }
+
+    // MARK: — Main processing pipeline
+
+    public func processImage() async {
+        guard let source = sourceImage else { return }
+        processingTask?.cancel()
+        processingTask = Task {
+            isProcessing = true
+            processingProgress = 0
+            stipplePoints = nil
+            drawingPath = nil
+
+            do {
+                // Step 1: Preprocess
+                currentPhase = .preprocessing
+                processingDetail = "Converting to grayscale…"
+                processingProgress = 0.05
+                let densityMap = try await Task.detached(priority: .userInitiated) {
+                    try ImagePreprocessor.process(image: source, settings: self.settings)
+                }.value
+
+                guard !Task.isCancelled else { return }
+                processingProgress = 0.15
+                currentPhase = .stippling
+
+                // Step 2: Voronoi stippling
+                let localSettings = settings
+                let points = await VoronoiStippler.stipple(
+                    densityMap: densityMap,
+                    settings: localSettings
+                ) { [weak self] progress in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        self.processingDetail = "Iteration \(progress.iteration)/\(progress.totalIterations) — displacement: \(String(format: "%.1f", progress.averageDisplacement))px"
+                        self.processingProgress = 0.15 + (Double(progress.iteration) / Double(max(1, progress.totalIterations))) * 0.35
+                    }
+                }
+
+                guard !Task.isCancelled else { return }
+                processingProgress = 0.50
+                currentPhase = .solvingTSP
+
+                // Step 3: TSP solve
+                let tour = await TSPSolver.solve(
+                    points: points,
+                    settings: localSettings
+                ) { [weak self] progress in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        self.processingDetail = "\(progress.phase.rawValue) (pass \(progress.passNumber))"
+                        self.processingProgress = 0.50 + progress.progressFraction * 0.30
+                    }
+                }
+
+                guard !Task.isCancelled else { return }
+                let orderedTour = TSPSolver.breakTourNearHome(tour: tour, points: points)
+                let orderedPoints = orderedTour.map { points[$0] }
+                stipplePoints = orderedPoints
+
+                processingProgress = 0.80
+                currentPhase = .optimizing
+                processingDetail = "Optimizing motor path…"
+
+                // Step 4: Path optimization
+                let localCalibration = calibration
+                let path = await Task.detached(priority: .userInitiated) {
+                    PathOptimizer.optimize(
+                        tour: Array(0..<orderedPoints.count),
+                        points: orderedPoints,
+                        densityMapWidth: ImagePreprocessor.workingWidth,
+                        densityMapHeight: ImagePreprocessor.workingHeight,
+                        calibration: localCalibration
+                    )
+                }.value
+
+                guard !Task.isCancelled else { return }
+                processingProgress = 0.90
+                currentPhase = .encoding
+                processingDetail = "Encoding for BLE transfer…"
+
+                // Step 5: Encode
+                let encodedPath = try DrawingPathEncoder.encode(path)
+                drawingPath = encodedPath
+
+                // Step 6: Render preview image
+                previewImage = renderPreviewImage(points: orderedPoints)
+
+                processingProgress = 1.0
+                isProcessing = false
+
+            } catch {
+                processingDetail = "Error: \(error.localizedDescription)"
+                isProcessing = false
+            }
+        }
+    }
+
+    // MARK: — Preview rendering
+
+    private func renderPreviewImage(points: [StipplePoint]) -> UIImage? {
+        guard points.count >= 2 else { return nil }
+        let size = CGSize(width: 500, height: 320)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { ctx in
+            // Background
+            UIColor(Color.etchGrey).setFill()
+            UIRectFill(CGRect(origin: .zero, size: size))
+
+            // Scale points to image size
+            let xs = points.map { $0.x }
+            let ys = points.map { $0.y }
+            let minX = xs.min()!; let maxX = xs.max()!
+            let minY = ys.min()!; let maxY = ys.max()!
+            let rangeX = max(maxX - minX, 1)
+            let rangeY = max(maxY - minY, 1)
+
+            func px(_ p: StipplePoint) -> CGPoint {
+                CGPoint(
+                    x: CGFloat((p.x - minX) / rangeX) * size.width,
+                    y: CGFloat((p.y - minY) / rangeY) * size.height
+                )
+            }
+
+            UIColor(Color.etchDark).setStroke()
+            let path = UIBezierPath()
+            path.lineWidth = 1.0
+            path.lineCapStyle = .round
+            path.lineJoinStyle = .round
+            path.move(to: px(points[0]))
+            for i in 1..<points.count { path.addLine(to: px(points[i])) }
+            path.stroke()
+        }
+    }
+
+    // MARK: — Save to photo library
+
+    public func savePreviewToPhotoLibrary() {
+        guard let image = previewImage else { return }
+        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+    }
+}
