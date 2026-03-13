@@ -1,6 +1,6 @@
-# EtchBot iOS App — Build Plan & Progress Tracker
+# EtchBot Build Plan & Progress Tracker
 
-**Last Updated:** 2026-03-12 — **ALL STEPS COMPLETE** ✓
+**Last Updated:** 2026-03-13 — Phase 1 (iOS) ✓ | Phase 2 (Firmware) ✓
 **Branch:** `claude/init-etchbot-ios-app-wtlxM`
 
 This document is the authoritative progress reference. After each session (including after rate-limit pauses), consult this file to determine where to resume.
@@ -156,6 +156,79 @@ This document is the authoritative progress reference. After each session (inclu
 
 ---
 
+## Phase 2 — Arduino Firmware
+
+### Phase 2A — Firmware (Arduino/C++ for Adafruit Feather nRF52840)
+
+- [x] **Step F1: config.h — constants and defaults**
+  - `etchbot-firmware/config.h`
+  - Motor ports, step mode, speed limits, buffer size, calibration defaults
+  - _Completed: 2026-03-13_
+
+- [x] **Step F2: path_storage — 50KB RAM buffer with CRC-16 verification**
+  - `etchbot-firmware/path_storage.h/.cpp`
+  - Chunked receive, magic-byte check, CRC-16/IBM matching iOS encoder
+  - _Completed: 2026-03-13_
+
+- [x] **Step F3: motor_controller — stepper abstraction**
+  - `etchbot-firmware/motor_controller.h/.cpp`
+  - Adafruit Motor Shield V2 wrapper, backlash compensation, position tracking
+  - Diagonal moves via interleaved X+Y steps
+  - _Completed: 2026-03-13_
+
+- [x] **Step F4: ble_service — GATT service and callbacks**
+  - `etchbot-firmware/ble_service.h/.cpp`
+  - All 5 characteristics (Status, DrawData, Control, Calibration, TransferStatus)
+  - Volatile command flags set by BLE callbacks, consumed by main loop
+  - BLE advertising, connection/disconnection callbacks
+  - _Completed: 2026-03-13_
+
+- [x] **Step F5: drawing_executor — path decoding and motor driving**
+  - `etchbot-firmware/drawing_executor.h/.cpp`
+  - Cooperative tick() — processes N moves per loop to keep BLE responsive
+  - Decodes 2-byte move commands (3-bit direction + 13-bit run length)
+  - Pause/Resume/Cancel, progress BLE notifications
+  - _Completed: 2026-03-13_
+
+- [x] **Step F6: homing — overshoot homing routine**
+  - `etchbot-firmware/homing.h/.cpp`
+  - Drives both axes 110% of max travel toward corner stop (no limit switch needed)
+  - Interleaved Bresenham movement for simultaneous X+Y homing
+  - _Completed: 2026-03-13_
+
+- [x] **Step F7: calibration — reference lines and backlash test patterns**
+  - `etchbot-firmware/calibration.h/.cpp`
+  - Horizontal and vertical reference lines (4000 steps, matches iOS wizard)
+  - 5 backlash test patterns per axis (0, 30, 60, 90, 120 steps)
+  - _Completed: 2026-03-13_
+
+- [x] **Step F8: etchbot-firmware.ino — setup, loop, state machine**
+  - `etchbot-firmware/etchbot-firmware.ino`
+  - LittleFS persistent calibration storage
+  - Full state machine: IDLE → RECEIVING → DRAWING → COMPLETE
+  - Handles all BLE commands, auto-saves calibration on write
+  - _Completed: 2026-03-13_
+
+---
+
+## Arduino IDE Setup (Jim's Task)
+
+1. Install Arduino IDE 2.x from [arduino.cc](https://www.arduino.cc/en/software)
+2. Add Adafruit nRF52 board package:
+   - File → Preferences → Additional Boards Manager URLs:
+     `https://adafruit.github.io/arduino-board-index/package_adafruit_index.json`
+   - Tools → Board → Boards Manager → search "Adafruit nRF52" → Install
+3. Select board: Tools → Board → "Adafruit Feather nRF52840 Express"
+4. Install libraries via Library Manager (Tools → Manage Libraries):
+   - "Adafruit Motor Shield V2 Library"
+   - "Adafruit BusIO" (dependency, may auto-install)
+5. Open `etchbot-firmware/etchbot-firmware.ino`
+6. Connect Feather nRF52840 via USB
+7. Select correct port: Tools → Port → (your Feather's COM/tty port)
+8. Upload (→ button) — first upload takes ~30 seconds
+
+---
+
 ## Xcode Project Setup (Jim's Task)
 
 The Swift source files are all created. To open in Xcode:
@@ -212,5 +285,6 @@ The Swift source files are all created. To open in Xcode:
 | Services | 10 |
 | Utilities | 3 |
 | Tests | 11 |
+| **Firmware** | **8** |
 | Docs | 2 |
 | **Total** | **57** |

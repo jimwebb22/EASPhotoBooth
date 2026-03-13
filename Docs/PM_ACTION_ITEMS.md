@@ -64,23 +64,55 @@ These tasks must be completed before the iOS app can be built and run in Xcode.
 
 ---
 
-## When You Have the Hardware (Phase 2)
+## When You Have the Hardware (Phase 2) — Firmware Ready ✓
 
-- [ ] Order parts from Adafruit if not already on hand (see `Docs/PROJECT_BRIEF.md` → Part IV for full list, ~$55–$115 depending on what you already have)
+**The firmware is complete in `etchbot-firmware/`.** Steps to flash and test:
+
+### 7. Flash the Firmware
+
+- [ ] Install Arduino IDE 2.x from [arduino.cc](https://www.arduino.cc/en/software)
+- [ ] Add Adafruit board package URL in IDE Preferences:
+  `https://adafruit.github.io/arduino-board-index/package_adafruit_index.json`
+- [ ] Install board: Tools → Boards Manager → "Adafruit nRF52" → Install
+- [ ] Install libraries via Tools → Manage Libraries:
+  - **Adafruit Motor Shield V2 Library**
+  - **Adafruit BusIO** (may auto-install as dependency)
+- [ ] Open `etchbot-firmware/etchbot-firmware.ino`
+- [ ] Select board: Tools → Board → **Adafruit Feather nRF52840 Express**
+- [ ] Connect Feather via USB, select port, click Upload
+
+### 8. Hardware Assembly
+
+- [ ] Order parts from Adafruit if not already on hand (~$55–$115, see `Docs/PROJECT_BRIEF.md` Part IV)
 - [ ] Assess existing stepper motors:
   - Verify bi-polar (4 wires)
   - Identify coil pairs with a multimeter
   - Confirm current draw < 1.2A per coil
 - [ ] Assess existing belt/pulley setup:
-  - Verify GT2 6mm belt
-  - Verify pulley tooth count and bore diameter
+  - Verify GT2 6mm belt and pulley tooth count
 - [ ] Solder stacking headers onto Feather nRF52840
 - [ ] Solder terminal blocks onto Stepper FeatherWing
 - [ ] Stack FeatherWing onto Feather
-- [ ] Wire stepper motors to FeatherWing terminal blocks (4 wires per motor)
+- [ ] Wire stepper motors: **M1+M2 = horizontal axis (X), M3+M4 = vertical axis (Y)**
 - [ ] Connect 12V power supply to FeatherWing VMotor terminal
-- [ ] Flash firmware (Claude Code will build this — Phase 2 deliverable)
-- [ ] Test with nRF Connect app before connecting iOS app
+
+### 9. Initial Firmware Test (before mounting to Etch-a-Sketch)
+
+- [ ] Power on Feather — 3 LED blinks = ready
+- [ ] Open nRF Connect app on iPhone
+- [ ] Scan for "EtchBot" device and connect
+- [ ] Verify all 5 characteristics appear in the GATT explorer
+- [ ] Write `0x20` (HOME command) to the Transfer Control characteristic
+  - Motors should spin slowly for a few seconds, then stop
+- [ ] Write `0x30` (CALIBRATE_H) — motor X should step 4000 steps east
+- [ ] If motors don't move: check I2C wiring, power supply voltage, and coil wire connections
+- [ ] If wrong motor moves: swap motor port assignments in `config.h`
+
+### 10. Mount and Calibrate
+
+- [ ] Mount motors and belts to Etch-a-Sketch
+- [ ] Run **Calibration Wizard** from the iOS app (Devices → select device → Run Calibration Wizard)
+- [ ] Verify drawings with simple test shapes before a full photo drawing
 
 ---
 
