@@ -49,6 +49,9 @@ private:
     // Decode a 2-byte move command at payload offset i*2
     void decodeMove(uint16_t index, StepDir& dir, uint16_t& runLen) const;
 
+    // Select motor speed based on segment length (variable speed for efficiency)
+    uint16_t speedForRunLength(uint16_t runLen) const;
+
     // Send a status notification if interval thresholds are met
     void maybeNotifyStatus();
 };

@@ -46,6 +46,40 @@ nonisolated public final class EdgeDetector: Sendable {
         return hysteresis(magnitude: suppressed, width: width, height: height, low: lowThreshold, high: highThreshold)
     }
 
+    /// Multi-scale Canny edge detection.
+    /// Runs edge detection at two scales (fine σ≈1.0 and coarse σ≈2.0) and merges
+    /// the results. The coarse pass captures broad structural edges (outlines) while
+    /// the fine pass captures detail edges (textures, veins).
+    public static func multiScaleCanny(
+        pixels: [Float],
+        width: Int,
+        height: Int
+    ) throws -> [Float] {
+        guard pixels.count == width * height, width > 4, height > 4 else {
+            throw EdgeDetectorError.invalidDimensions
+        }
+        // Fine scale: σ ≈ 1.0 (radius 2, default kernel)
+        let fineEdges = try canny(
+            pixels: pixels, width: width, height: height,
+            lowThreshold: 0.05, highThreshold: 0.15
+        )
+        // Coarse scale: σ ≈ 2.0 (double blur, lower thresholds for broader edges)
+        let coarseBlurred = gaussianBlur(
+            pixels: gaussianBlur(pixels: pixels, width: width, height: height, radius: 2),
+            width: width, height: height, radius: 2
+        )
+        let (gxC, gyC, magC) = sobelGradients(pixels: coarseBlurred, width: width, height: height)
+        let suppC = nonMaxSuppression(gx: gxC, gy: gyC, magnitude: magC, width: width, height: height)
+        let coarseEdges = hysteresis(magnitude: suppC, width: width, height: height, low: 0.03, high: 0.10)
+
+        // Merge: take the max of both scales at each pixel
+        var merged = [Float](repeating: 0, count: width * height)
+        for i in 0..<merged.count {
+            merged[i] = max(fineEdges[i], coarseEdges[i])
+        }
+        return merged
+    }
+
     // MARK: — Gaussian blur
 
     private static func gaussianBlur(pixels: [Float], width: Int, height: Int, radius: Int) -> [Float] {

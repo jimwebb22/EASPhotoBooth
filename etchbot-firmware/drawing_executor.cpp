@@ -41,6 +41,9 @@ bool DrawingExecutor::tick(uint16_t movesPerTick) {
         uint16_t runLen;
         decodeMove(_moveIdx, dir, runLen);
 
+        // Variable speed: long straight segments can run faster without quality loss
+        uint16_t rpm = speedForRunLength(runLen);
+        motors.setSpeedRPM(rpm);
         motors.move(dir, runLen);
 
         _moveIdx++;
@@ -92,6 +95,14 @@ void DrawingExecutor::cancel() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Private helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+uint16_t DrawingExecutor::speedForRunLength(uint16_t runLen) const {
+    // Long straight segments can be drawn faster without visible quality loss.
+    // Short segments near detail areas stay at the default speed.
+    if (runLen > 200) return SPEED_MAX_RPM;       // 200 RPM for long traversals
+    if (runLen > 50)  return 150;                  // 150 RPM for medium segments
+    return SPEED_DRAW_DEFAULT_RPM;                 // 100 RPM for detail work
+}
 
 void DrawingExecutor::decodeMove(uint16_t index, StepDir& dir, uint16_t& runLen) const {
     // Each move is 2 bytes at payload offset index*2:

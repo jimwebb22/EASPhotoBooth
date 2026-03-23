@@ -74,9 +74,12 @@ nonisolated public final class TSPSolver: Sendable {
                 await Task.yield()
             }
 
-            // Phase 2: 2-opt improvement (capped at 20 passes or 10 seconds)
-            let maxPasses = 20
-            let twoOptDeadline = ContinuousClock.now + .seconds(10)
+            // Phase 2: 2-opt improvement — time budget scales with point count
+            // 3000 pts → 10s, 10000 pts → 20s, 15000 pts → 30s, 20000 pts → 40s
+            let maxPasses = 30
+            let twoOptSeconds = max(10, min(60, n / 500))
+            let twoOptDeadline = ContinuousClock.now + .seconds(twoOptSeconds)
+            let neighborCount = min(40, max(20, n / 200))
             var improved = true
             var pass = 0
             var prevLength = bestLength
@@ -84,7 +87,7 @@ nonisolated public final class TSPSolver: Sendable {
             while improved && pass < maxPasses && ContinuousClock.now < twoOptDeadline {
                 improved = false
                 pass += 1
-                let (newTour, newLength) = Self.twoOptPass(points: points, tour: bestTour, kdTree: kdTree)
+                let (newTour, newLength) = Self.twoOptPass(points: points, tour: bestTour, kdTree: kdTree, neighborCount: neighborCount)
                 if newLength < bestLength - 0.001 {
                     bestTour = newTour
                     bestLength = newLength
@@ -155,7 +158,8 @@ nonisolated public final class TSPSolver: Sendable {
     private static func twoOptPass(
         points: [StipplePoint],
         tour: [Int],
-        kdTree: KDTree
+        kdTree: KDTree,
+        neighborCount: Int = 20
     ) -> ([Int], Double) {
         let n = tour.count
         var improved = tour
@@ -172,8 +176,8 @@ nonisolated public final class TSPSolver: Sendable {
             let b = improved[i + 1]
             let ab = points[a].distance(to: points[b])
 
-            // Only check the nearest 20 neighbours of a as potential j
-            let neighbours = kdTree.kNearest(to: points[a], k: 20)
+            // Check nearest neighbours of a as potential j (scaled with point count)
+            let neighbours = kdTree.kNearest(to: points[a], k: neighborCount)
             for candidateIdx in neighbours {
                 let j = position[candidateIdx]
                 guard j > i + 1, j < n - 1 else { continue }
@@ -205,12 +209,18 @@ nonisolated public final class TSPSolver: Sendable {
 
     /// Relocate individual nodes to better positions using delta-based cost evaluation.
     /// Uses KD-tree to find candidate insertion positions instead of brute-force.
+    /// Position map provides O(1) lookup instead of O(n) firstIndex(of:).
     private static func orOpt(points: [StipplePoint], tour: [Int], kdTree: KDTree) -> ([Int], Double) {
         let n = tour.count
         guard n >= 4 else { return (tour, tourLength(points: points, tour: tour)) }
         var best = tour
         var bestLen = tourLength(points: points, tour: best)
 
+        // Build position map: pointIndex → tour position
+        var position = [Int](repeating: 0, count: points.count)
+        for i in 0..<n { position[best[i]] = i }
+
+        let orOptNeighborCount = min(15, max(10, n / 500))
         var madeImprovement = true
         var iterations = 0
         while madeImprovement && iterations < 5 {
@@ -228,15 +238,12 @@ nonisolated public final class TSPSolver: Sendable {
                 let removalSaving = removeCost - directCost
 
                 // Only try reinserting near KD-tree neighbours of the node
-                let neighbours = kdTree.kNearest(to: points[node], k: 10)
+                let neighbours = kdTree.kNearest(to: points[node], k: orOptNeighborCount)
                 var bestInsertCost = Double.infinity
                 var bestInsertPos = -1
 
-                // Build a quick position lookup
-                // (for small neighbour sets, linear scan of tour is acceptable)
                 for candidateIdx in neighbours {
-                    // Find position of this candidate in the tour
-                    guard let pos = best.firstIndex(of: candidateIdx) else { continue }
+                    let pos = position[candidateIdx]
                     guard pos != i, pos != i - 1, pos < n - 1 else { continue }
 
                     let edgeStart = best[pos]
@@ -262,6 +269,8 @@ nonisolated public final class TSPSolver: Sendable {
                     best.insert(node, at: insertAt)
                     bestLen = bestLen - removalSaving + bestInsertCost
                     madeImprovement = true
+                    // Rebuild position map after mutation
+                    for j in 0..<n { position[best[j]] = j }
                 }
             }
         }

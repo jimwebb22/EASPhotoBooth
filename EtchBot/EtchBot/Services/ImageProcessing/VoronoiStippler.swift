@@ -10,7 +10,7 @@
 //      d. Re-sample orphan cells (zero-density cells) uniformly.
 //   3. Return ordered array of StipplePoint in Etch-a-Sketch drawing space.
 //
-// Performance target: <3 seconds for 3000 points on iPhone 12+.
+// Performance target: <3 seconds for 3000 points, <15 seconds for 15000 points on iPhone 12+.
 // Uses async/await for non-blocking progress reporting.
 
 import Foundation

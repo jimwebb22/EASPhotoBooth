@@ -23,9 +23,10 @@ nonisolated public enum ImagePreprocessorError: Error {
 nonisolated public final class ImagePreprocessor: Sendable {
 
     // MARK: — Constants
-    /// Working resolution — matches Etch-a-Sketch proportions (500:320 ≈ 25:16).
-    public static let workingWidth = 500
-    public static let workingHeight = 320
+    /// Working resolution — matches Etch-a-Sketch proportions (1000:640 ≈ 25:16).
+    /// Higher resolution preserves more tonal detail for stippling at 8000+ points.
+    public static let workingWidth = 1000
+    public static let workingHeight = 640
 
     // MARK: — Public entry point
 
@@ -59,17 +60,22 @@ nonisolated public final class ImagePreprocessor: Sendable {
         //    Input grayPixels: 0=black, 1=white → invert to get density
         var densityPixels = grayPixels.map { 1.0 - $0 }
 
+        // 5b. Suppress blurry/out-of-focus background regions
+        suppressBackground(pixels: &densityPixels, width: workingWidth, height: workingHeight)
+
         // 6. Blend with edge map if enabled
         if settings.edgeEmphasisEnabled {
-            let edgeMap = try EdgeDetector.canny(
+            let edgeMap = try EdgeDetector.multiScaleCanny(
                 pixels: grayPixels,      // pass original (not inverted) for edge detection
                 width: workingWidth,
                 height: workingHeight
             )
             let w = Float(settings.edgeWeight)
-            let t = 1.0 - w
             for i in 0..<densityPixels.count {
-                densityPixels[i] = (densityPixels[i] * t + edgeMap[i] * w).clamped(to: 0...1)
+                // Adaptive blending: edges always add density, never reduce it.
+                // In edge regions, boost density to concentrate stipple points on structure.
+                let edgeBoost = edgeMap[i] * w * 2.0  // edges contribute strongly
+                densityPixels[i] = max(densityPixels[i], edgeBoost).clamped(to: 0...1)
             }
         }
 
@@ -174,15 +180,67 @@ nonisolated public final class ImagePreprocessor: Sendable {
         )
     }
 
-    // MARK: — Private: Contrast boost
+    // MARK: — Private: Contrast boost (sigmoid curve)
 
-    /// Multiply each pixel value by `factor`, clamping result to [0, 1].
+    /// Apply a sigmoid contrast curve that preserves the full tonal range.
+    /// Unlike linear multiplication, this doesn't clip highlights/shadows.
+    /// Steepness scales with the contrast multiplier setting.
     private static func applyContrastBoost(pixels: inout [Float], factor: Float) {
-        let n = vDSP_Length(pixels.count)
-        var f = factor
-        vDSP_vsmul(pixels, 1, &f, &pixels, 1, n)
-        var lo: Float = 0; var hi: Float = 1
-        vDSP_vclip(pixels, 1, &lo, &hi, &pixels, 1, n)
+        let steepness = 5.0 * factor  // factor 1.0 → gentle, 2.0 → strong, 3.0 → very strong
+        let midpoint: Float = 0.5
+        for i in 0..<pixels.count {
+            let x = pixels[i]
+            pixels[i] = 1.0 / (1.0 + exp(-steepness * (x - midpoint)))
+        }
+    }
+
+    // MARK: — Private: Background suppression
+
+    /// Suppress low-variance (blurry/out-of-focus) regions by reducing their density.
+    /// This concentrates stipple points on sharp foreground subjects.
+    private static func suppressBackground(
+        pixels: inout [Float],
+        width: Int,
+        height: Int,
+        tileSize: Int = 16,
+        varianceThreshold: Float = 0.01,
+        suppressionFactor: Float = 0.3
+    ) {
+        let tilesX = (width + tileSize - 1) / tileSize
+        let tilesY = (height + tileSize - 1) / tileSize
+
+        for ty in 0..<tilesY {
+            for tx in 0..<tilesX {
+                let x0 = tx * tileSize
+                let y0 = ty * tileSize
+                let x1 = min(x0 + tileSize, width)
+                let y1 = min(y0 + tileSize, height)
+
+                // Compute local mean and variance
+                var sum: Float = 0
+                var sumSq: Float = 0
+                var count: Float = 0
+                for y in y0..<y1 {
+                    for x in x0..<x1 {
+                        let v = pixels[y * width + x]
+                        sum += v
+                        sumSq += v * v
+                        count += 1
+                    }
+                }
+                let mean = sum / count
+                let variance = (sumSq / count) - (mean * mean)
+
+                // Suppress low-variance tiles
+                if variance < varianceThreshold {
+                    for y in y0..<y1 {
+                        for x in x0..<x1 {
+                            pixels[y * width + x] *= suppressionFactor
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: — Private: CLAHE

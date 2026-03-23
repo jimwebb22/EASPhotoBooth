@@ -29,26 +29,50 @@ nonisolated public struct DrawingSettings: Codable, Sendable, Equatable {
     /// How many random starting tours to try for TSP nearest-neighbor phase. Default: 8.
     public var tspStartingPositions: Int
 
-    // MARK: — Defaults
-    public static let defaults = DrawingSettings(
-        pointCount: 2500,
-        contrastMultiplier: 1.0,
-        edgeEmphasisEnabled: false,
-        edgeWeight: 0.3,
-        voronoiIterations: 40,
+    // MARK: — Presets
+    /// Quick preset: fast but low detail, suitable for testing.
+    public static let quick = DrawingSettings(
+        pointCount: 3000,
+        contrastMultiplier: 1.2,
+        edgeEmphasisEnabled: true,
+        edgeWeight: 0.4,
+        voronoiIterations: 30,
+        tspStartingPositions: 5
+    )
+
+    /// Balanced preset: good photo resemblance with reasonable draw time.
+    public static let balanced = DrawingSettings(
+        pointCount: 8000,
+        contrastMultiplier: 1.5,
+        edgeEmphasisEnabled: true,
+        edgeWeight: 0.5,
+        voronoiIterations: 50,
         tspStartingPositions: 8
     )
 
+    /// Detailed preset: highest quality, longer draw and compute time.
+    public static let detailed = DrawingSettings(
+        pointCount: 15000,
+        contrastMultiplier: 1.5,
+        edgeEmphasisEnabled: true,
+        edgeWeight: 0.5,
+        voronoiIterations: 60,
+        tspStartingPositions: 10
+    )
+
+    // MARK: — Defaults
+    public static let defaults = DrawingSettings.balanced
+
     // MARK: — Slider bounds (used by UI)
-    public static let pointCountRange: ClosedRange<Int> = 500...6000
-    public static let contrastRange: ClosedRange<Double> = 0.5...2.0
+    public static let pointCountRange: ClosedRange<Int> = 500...20000
+    public static let contrastRange: ClosedRange<Double> = 0.5...3.0
 
     public init(
-        pointCount: Int = 2500,
-        contrastMultiplier: Double = 1.0,
-        edgeEmphasisEnabled: Bool = false,
-        edgeWeight: Double = 0.3,
-        voronoiIterations: Int = 40,
+        pointCount: Int = 8000,
+        contrastMultiplier: Double = 1.5,
+        edgeEmphasisEnabled: Bool = true,
+        edgeWeight: Double = 0.5,
+        voronoiIterations: Int = 50,
         tspStartingPositions: Int = 8
     ) {
         self.pointCount = pointCount
@@ -59,10 +83,11 @@ nonisolated public struct DrawingSettings: Codable, Sendable, Equatable {
         self.tspStartingPositions = tspStartingPositions
     }
 
-    /// Estimated draw time in minutes for a given point count at 100 RPM motor speed.
-    /// Rough heuristic: ~0.8 seconds per stipple point at 100 RPM.
+    /// Estimated draw time in minutes with variable speed motor control.
+    /// At higher point counts, average speed increases due to longer segments at 150-200 RPM.
+    /// Heuristic: ~0.5 seconds per stipple point (accounting for variable speed).
     public var estimatedDrawTimeMinutes: Int {
-        let seconds = Double(pointCount) * 0.8
+        let seconds = Double(pointCount) * 0.5
         return max(1, Int(seconds / 60.0))
     }
 }
