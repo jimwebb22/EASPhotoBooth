@@ -7,12 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		312143201C344B85009C753E /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3121431F1C344B85009C753E /* Location.swift */; };
+		312D2EC91C4DB3DE0041A247 /* etch_a_sketch_logo_sans_background.png in Resources */ = {isa = PBXBuildFile; fileRef = 312D2EC81C4DB3DE0041A247 /* etch_a_sketch_logo_sans_background.png */; };
+		314B71C21C3B5A3600381970 /* CreatePathFromImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 314B71C11C3B5A3600381970 /* CreatePathFromImage.swift */; };
+		316AC00B1B7AD32900800A60 /* Motor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 316AC00A1B7AD32900800A60 /* Motor.swift */; };
 		31B7CC2F1A6DF67800F47791 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B7CC2E1A6DF67800F47791 /* AppDelegate.swift */; };
-		31B7CC311A6DF67800F47791 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B7CC301A6DF67800F47791 /* ViewController.swift */; };
+		31B7CC311A6DF67800F47791 /* ChooseImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B7CC301A6DF67800F47791 /* ChooseImageViewController.swift */; };
 		31B7CC341A6DF67800F47791 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 31B7CC321A6DF67800F47791 /* Main.storyboard */; };
 		31B7CC361A6DF67800F47791 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 31B7CC351A6DF67800F47791 /* Images.xcassets */; };
 		31B7CC391A6DF67800F47791 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 31B7CC371A6DF67800F47791 /* LaunchScreen.xib */; };
 		31B7CC451A6DF67800F47791 /* EAS_Photo_BoothTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B7CC441A6DF67800F47791 /* EAS_Photo_BoothTests.swift */; };
+		31B974A31CB32363002E2466 /* CreateTextPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B974A21CB32363002E2466 /* CreateTextPath.swift */; };
+		31BE3A3F1B6C41BB00A5B487 /* EASScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31BE3A3E1B6C41BB00A5B487 /* EASScreen.swift */; };
+		31CD74361B92696D00D50298 /* Default-568h@2x 17-25-25-224.png in Resources */ = {isa = PBXBuildFile; fileRef = 31CD74341B92696D00D50298 /* Default-568h@2x 17-25-25-224.png */; };
+		31CD74371B92696D00D50298 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 31CD74351B92696D00D50298 /* Default-568h@2x.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,16 +34,25 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3121431F1C344B85009C753E /* Location.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Location.swift; path = "EAS Photo Booth/Location.swift"; sourceTree = "<group>"; };
+		312D2EC81C4DB3DE0041A247 /* etch_a_sketch_logo_sans_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = etch_a_sketch_logo_sans_background.png; sourceTree = "<group>"; };
+		314B71C11C3B5A3600381970 /* CreatePathFromImage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreatePathFromImage.swift; sourceTree = "<group>"; };
+		316AC00A1B7AD32900800A60 /* Motor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Motor.swift; sourceTree = "<group>"; };
 		31B7CC291A6DF67800F47791 /* EAS Photo Booth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "EAS Photo Booth.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		31B7CC2D1A6DF67800F47791 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		31B7CC2E1A6DF67800F47791 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		31B7CC301A6DF67800F47791 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		31B7CC301A6DF67800F47791 /* ChooseImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChooseImageViewController.swift; sourceTree = "<group>"; };
 		31B7CC331A6DF67800F47791 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		31B7CC351A6DF67800F47791 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		31B7CC381A6DF67800F47791 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		31B7CC3E1A6DF67800F47791 /* EAS Photo BoothTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "EAS Photo BoothTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		31B7CC431A6DF67800F47791 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		31B7CC441A6DF67800F47791 /* EAS_Photo_BoothTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EAS_Photo_BoothTests.swift; sourceTree = "<group>"; };
+		31B974A21CB32363002E2466 /* CreateTextPath.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreateTextPath.swift; sourceTree = "<group>"; };
+		31BE3A3E1B6C41BB00A5B487 /* EASScreen.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = EASScreen.swift; path = "EAS Photo Booth/EASScreen.swift"; sourceTree = "<group>"; };
+		31BF41EB1AA5E1100004FDEF /* EASTestPlayground.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; path = EASTestPlayground.playground; sourceTree = "<group>"; };
+		31CD74341B92696D00D50298 /* Default-568h@2x 17-25-25-224.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x 17-25-25-224.png"; sourceTree = "<group>"; };
+		31CD74351B92696D00D50298 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +76,9 @@
 		31B7CC201A6DF67800F47791 = {
 			isa = PBXGroup;
 			children = (
+				31CD74341B92696D00D50298 /* Default-568h@2x 17-25-25-224.png */,
+				31CD74351B92696D00D50298 /* Default-568h@2x.png */,
+				31FC55471C38285500F0F9F0 /* Classes */,
 				31B7CC2B1A6DF67800F47791 /* EAS Photo Booth */,
 				31B7CC411A6DF67800F47791 /* EAS Photo BoothTests */,
 				31B7CC2A1A6DF67800F47791 /* Products */,
@@ -78,11 +98,10 @@
 			isa = PBXGroup;
 			children = (
 				31B7CC2E1A6DF67800F47791 /* AppDelegate.swift */,
-				31B7CC301A6DF67800F47791 /* ViewController.swift */,
+				31B7CC301A6DF67800F47791 /* ChooseImageViewController.swift */,
 				31B7CC321A6DF67800F47791 /* Main.storyboard */,
-				31B7CC351A6DF67800F47791 /* Images.xcassets */,
-				31B7CC371A6DF67800F47791 /* LaunchScreen.xib */,
 				31B7CC2C1A6DF67800F47791 /* Supporting Files */,
+				31BF41EB1AA5E1100004FDEF /* EASTestPlayground.playground */,
 			);
 			path = "EAS Photo Booth";
 			sourceTree = "<group>";
@@ -90,7 +109,10 @@
 		31B7CC2C1A6DF67800F47791 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				31B7CC351A6DF67800F47791 /* Images.xcassets */,
+				31B7CC371A6DF67800F47791 /* LaunchScreen.xib */,
 				31B7CC2D1A6DF67800F47791 /* Info.plist */,
+				312D2EC81C4DB3DE0041A247 /* etch_a_sketch_logo_sans_background.png */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -110,6 +132,18 @@
 				31B7CC431A6DF67800F47791 /* Info.plist */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		31FC55471C38285500F0F9F0 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				314B71C11C3B5A3600381970 /* CreatePathFromImage.swift */,
+				31B974A21CB32363002E2466 /* CreateTextPath.swift */,
+				316AC00A1B7AD32900800A60 /* Motor.swift */,
+				3121431F1C344B85009C753E /* Location.swift */,
+				31BE3A3E1B6C41BB00A5B487 /* EASScreen.swift */,
+			);
+			name = Classes;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -156,14 +190,19 @@
 		31B7CC211A6DF67800F47791 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastSwiftMigration = 0700;
+				LastSwiftUpdateCheck = 0700;
+				LastUpgradeCheck = 0830;
 				ORGANIZATIONNAME = "B&T Inc.";
 				TargetAttributes = {
 					31B7CC281A6DF67800F47791 = {
 						CreatedOnToolsVersion = 6.1.1;
+						DevelopmentTeam = G7DC9KGYKH;
+						LastSwiftMigration = 0800;
 					};
 					31B7CC3D1A6DF67800F47791 = {
 						CreatedOnToolsVersion = 6.1.1;
+						LastSwiftMigration = 0800;
 						TestTargetID = 31B7CC281A6DF67800F47791;
 					};
 				};
@@ -194,7 +233,10 @@
 			files = (
 				31B7CC341A6DF67800F47791 /* Main.storyboard in Resources */,
 				31B7CC391A6DF67800F47791 /* LaunchScreen.xib in Resources */,
+				31CD74361B92696D00D50298 /* Default-568h@2x 17-25-25-224.png in Resources */,
+				31CD74371B92696D00D50298 /* Default-568h@2x.png in Resources */,
 				31B7CC361A6DF67800F47791 /* Images.xcassets in Resources */,
+				312D2EC91C4DB3DE0041A247 /* etch_a_sketch_logo_sans_background.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -212,8 +254,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				31B7CC311A6DF67800F47791 /* ViewController.swift in Sources */,
+				31B7CC311A6DF67800F47791 /* ChooseImageViewController.swift in Sources */,
 				31B7CC2F1A6DF67800F47791 /* AppDelegate.swift in Sources */,
+				314B71C21C3B5A3600381970 /* CreatePathFromImage.swift in Sources */,
+				31B974A31CB32363002E2466 /* CreateTextPath.swift in Sources */,
+				31BE3A3F1B6C41BB00A5B487 /* EASScreen.swift in Sources */,
+				312143201C344B85009C753E /* Location.swift in Sources */,
+				316AC00B1B7AD32900800A60 /* Motor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -268,15 +315,19 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -289,7 +340,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -311,8 +362,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -320,15 +373,17 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -338,9 +393,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = "EAS Photo Booth/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "Jim-Webb.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -348,9 +409,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = "EAS Photo Booth/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "Jim-Webb.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
@@ -368,7 +435,9 @@
 				);
 				INFOPLIST_FILE = "EAS Photo BoothTests/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "Jim-Webb.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EAS Photo Booth.app/EAS Photo Booth";
 			};
 			name = Debug;
@@ -383,7 +452,9 @@
 				);
 				INFOPLIST_FILE = "EAS Photo BoothTests/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "Jim-Webb.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EAS Photo Booth.app/EAS Photo Booth";
 			};
 			name = Release;
@@ -407,6 +478,7 @@
 				31B7CC4A1A6DF67800F47791 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		31B7CC4B1A6DF67800F47791 /* Build configuration list for PBXNativeTarget "EAS Photo BoothTests" */ = {
 			isa = XCConfigurationList;
@@ -415,6 +487,7 @@
 				31B7CC4D1A6DF67800F47791 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
