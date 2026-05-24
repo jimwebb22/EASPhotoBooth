@@ -86,7 +86,7 @@ struct BLECommandFlags {
     volatile bool setSpeed;
     volatile uint8_t newSpeed;
     volatile bool calibrationWritten;
-    volatile CalibrationWireData newCalibration;
+    CalibrationWireData newCalibration;
 
     void clear() {
         startTransfer     = false;

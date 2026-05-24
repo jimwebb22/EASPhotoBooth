@@ -126,6 +126,7 @@ static const uint16_t BACKLASH_TEST_VALUES[BACKLASH_TEST_PATTERN_COUNT] = {0, 30
 #define ETCHBOT_DEBUG
 
 #ifdef ETCHBOT_DEBUG
+  #include <Arduino.h>
   #define DBG_PRINT(x)    Serial.print(x)
   #define DBG_PRINTLN(x)  Serial.println(x)
   #define DBG_PRINTF(...) Serial.printf(__VA_ARGS__)

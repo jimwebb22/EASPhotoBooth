@@ -6,6 +6,7 @@
 #pragma once
 #include <stdint.h>
 #include "config.h"
+#include "motor_controller.h"
 #include "ble_service.h"
 
 class DrawingExecutor {
