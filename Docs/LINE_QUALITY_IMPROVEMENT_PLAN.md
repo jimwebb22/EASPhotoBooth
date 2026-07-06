@@ -235,6 +235,12 @@ WS0–WS4a are fully independent: five agents can start simultaneously. Each wor
 
 ## Part 5 — Status log
 
+- **2026-07-06 — WS6 complete** (this branch; WS5 path smoothing deferred until hardware testing):
+  - WS6.1: Canny now runs at 2× working resolution and the edge map is max-pooled back down (thin edges survive; fine detail like eyes/hair is caught). Blur is vDSP_f5x5, Sobel is vDSP_f3x3 ×2, magnitude via vDSP_vdist; convolution border artifacts suppressed within 3 px. Also fixed `resizedImage` to force renderer scale 1 — the default format renders at device display scale, which would size every derived pixel buffer 2–3× the working resolution.
+  - WS6.2: `VoronoiDiagram` assignment rewritten from per-pixel KD-tree queries to jump flooding (ping-pong JFA + a final step-1 pass), with nearest-free-pixel seeding so near-coincident sites aren't dropped. Equivalence vs. brute force asserted in tests (≥99% exact, all within 0.75 px).
+  - WS6.3: point-count ceiling raised to 10 000 (safe: run-length-merged move counts stay well under the 65 535 protocol limit); point count auto-tunes per photo from mean density (√coverage scaling, 800–6000), with a `lastProcessedSettings` guard so the programmatic settings change doesn't trigger a redundant reprocess; draw-time estimate now computed from the actual encoded moves at the calibrated RPM with diagonal runs costed 2×, shown in the editor instead of the 0.8 s/point heuristic.
+  - Same toolchain caveat: authored without local Swift — **run `swift test` on macOS/Xcode before merging.**
+
 - **2026-07-06 — WS2 complete** (this branch):
   - WS2.1: rejection sampling is now strictly density-proportional (no 2% acceptance floor, no uniform fallback — `pointCount` is an upper bound); orphaned Lloyd cells are dropped instead of re-seeded; the Voronoi background weight (0.01) is removed so blank pixels contribute nothing. `PipelineQualityTests` now ASSERTS ≤1% of points in blank regions (was report-only).
   - WS2.2: new `ToneShaper` (platform-independent, unit-tested): contrast as a mid-gray-pivoted stretch (the old multiply just brightened everything), `toneGamma` (default 1.8) for midtone/shadow separation, smoothstep `backgroundCutoff` (default 0.08); CLAHE now has a strength setting (default 0.3, 0 = off) blended with the input instead of always applying at full strength.

@@ -88,13 +88,26 @@ public final class ImagePreprocessor: Sendable {
 
         // 6. Edge map: the hybrid style traces it into contour chains;
         //    the stipple style blends it into the density.
+        //    Canny runs at 2× working resolution to catch fine detail
+        //    (eyes, hair, glasses); the result is max-pooled back down so
+        //    thin edges survive. Falls back to working resolution if the
+        //    2× resize fails.
         var edgeMap: [Float]? = nil
         if settings.renderStyle == .hybrid || settings.edgeEmphasisEnabled {
-            edgeMap = try EdgeDetector.canny(
-                pixels: grayPixels,      // pass original (not inverted) for edge detection
-                width: workingWidth,
-                height: workingHeight
-            )
+            let edgeW = workingWidth * 2
+            let edgeH = workingHeight * 2
+            if let resized2x = resizedImage(image, to: CGSize(width: edgeW, height: edgeH)) {
+                var gray2x = try toGrayscaleFloat(image: resized2x)
+                ToneShaper.applyContrast(&gray2x, multiplier: Float(settings.contrastMultiplier))
+                let edges2x = try EdgeDetector.canny(pixels: gray2x, width: edgeW, height: edgeH)
+                edgeMap = EdgeDetector.downsampleMax2x(edges2x, width: edgeW, height: edgeH).pixels
+            } else {
+                edgeMap = try EdgeDetector.canny(
+                    pixels: grayPixels,      // pass original (not inverted) for edge detection
+                    width: workingWidth,
+                    height: workingHeight
+                )
+            }
         }
 
         // 7. Blend edges into density — stipple style only. The hybrid style
@@ -154,7 +167,12 @@ public final class ImagePreprocessor: Sendable {
         let offsetX = (scaledW - size.width) / 2
         let offsetY = (scaledH - size.height) / 2
 
-        let renderer = UIGraphicsImageRenderer(size: size)
+        // Force scale 1: the default renderer format uses the device display
+        // scale (2×/3×), which would make the backing CGImage — and every
+        // pixel buffer derived from it — a multiple of the requested size.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
         return renderer.image { ctx in
             image.draw(in: CGRect(x: -offsetX, y: -offsetY, width: scaledW, height: scaledH))
         }

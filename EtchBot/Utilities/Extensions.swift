@@ -21,6 +21,12 @@ public extension Double {
     }
 }
 
+public extension Int {
+    func clamped(to range: ClosedRange<Int>) -> Int {
+        Swift.min(range.upperBound, Swift.max(range.lowerBound, self))
+    }
+}
+
 // MARK: — Seeded RNG
 
 /// SplitMix64 — a small, fast, seedable RNG. Used by the tour solvers so
@@ -72,6 +78,15 @@ public struct DensityMap: Sendable {
     public func value(x: Int, y: Int) -> Float {
         guard x >= 0, x < width, y >= 0, y < height else { return 0 }
         return pixels[y * width + x]
+    }
+
+    /// Mean density across the map (0 = fully blank, 1 = fully dark).
+    /// Used to auto-tune the stipple point count per image.
+    public var meanDensity: Double {
+        guard !pixels.isEmpty else { return 0 }
+        var total: Double = 0
+        for v in pixels { total += Double(v) }
+        return total / Double(pixels.count)
     }
 
     /// Bilinear interpolation for sub-pixel (fx, fy) in [0, width) x [0, height).

@@ -32,6 +32,27 @@ final class ImageProcessingViewModelTests: XCTestCase {
         XCTAssertEqual(decoded, settings)
     }
 
+    func testAdaptivePointCountScalesWithCoverage() {
+        let sparse = DrawingSettings.adaptivePointCount(meanDensity: 0.02)
+        let typical = DrawingSettings.adaptivePointCount(meanDensity: 0.2)
+        let dense = DrawingSettings.adaptivePointCount(meanDensity: 0.6)
+        XCTAssertLessThan(sparse, typical)
+        XCTAssertLessThan(typical, dense)
+        // Always within the slider range, never zero.
+        XCTAssertGreaterThanOrEqual(sparse, DrawingSettings.pointCountRange.lowerBound)
+        XCTAssertLessThanOrEqual(dense, DrawingSettings.pointCountRange.upperBound)
+    }
+
+    func testAdaptivePointCountClampsExtremes() {
+        XCTAssertEqual(DrawingSettings.adaptivePointCount(meanDensity: 0), 800)
+        XCTAssertEqual(DrawingSettings.adaptivePointCount(meanDensity: 1), 6000)
+    }
+
+    func testDensityMapMeanDensity() {
+        let map = DensityMap(width: 2, height: 2, pixels: [0, 0.5, 1.0, 0.5])
+        XCTAssertEqual(map.meanDensity, 0.5, accuracy: 1e-6)
+    }
+
     func testEstimatedDrawTimeScalesWithPointCount() {
         var settings = DrawingSettings.defaults
         settings.pointCount = 500

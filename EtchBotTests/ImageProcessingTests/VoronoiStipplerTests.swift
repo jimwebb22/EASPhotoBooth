@@ -53,6 +53,43 @@ final class VoronoiStipplerTests: XCTestCase {
         XCTAssertNil(idx)
     }
 
+    // MARK: — Jump-flood assignment
+
+    /// The JFA pixel assignment must agree with brute-force nearest-site
+    /// search. JFA+1 is near-exact but not provably exact, so allow a tiny
+    /// error budget: every pixel within 0.75px of optimal, ≥99% exact.
+    func testJumpFloodMatchesBruteForceNearest() {
+        var rng = SeededRandomNumberGenerator(seed: 5)
+        let w = 40, h = 30
+        let points: [StipplePoint] = (0..<25).map { _ in
+            .init(x: Float.random(in: 0..<Float(w), using: &rng),
+                  y: Float.random(in: 0..<Float(h), using: &rng))
+        }
+        let labels = VoronoiDiagram.assignPixels(points: points, width: w, height: h)
+
+        var exactCount = 0
+        for y in 0..<h {
+            for x in 0..<w {
+                let label = Int(labels[y * w + x])
+                XCTAssertGreaterThanOrEqual(label, 0, "Every pixel must be assigned")
+                let q = StipplePoint(x: Float(x), y: Float(y))
+                let assigned = q.distance(to: points[label])
+                let best = points.map { q.distance(to: $0) }.min()!
+                XCTAssertLessThanOrEqual(assigned, best + 0.75,
+                    "Pixel (\(x),\(y)) assigned to a site far from optimal")
+                if assigned - best < 1e-4 { exactCount += 1 }
+            }
+        }
+        XCTAssertGreaterThan(Double(exactCount) / Double(w * h), 0.99)
+    }
+
+    func testJumpFloodSeparatesTwoSites() {
+        let points: [StipplePoint] = [.init(x: 5, y: 10), .init(x: 35, y: 10)]
+        let labels = VoronoiDiagram.assignPixels(points: points, width: 40, height: 20)
+        XCTAssertEqual(labels[10 * 40 + 2], 0)
+        XCTAssertEqual(labels[10 * 40 + 38], 1)
+    }
+
     // MARK: — VoronoiDiagram weighted centroid tests
 
     func testWeightedCentroidSinglePoint() {
@@ -95,7 +132,7 @@ final class VoronoiStipplerTests: XCTestCase {
 
     // MARK: — VoronoiStippler integration test
 
-    func testStipplerProducesCorrectPointCount() async {
+    func testStipplerProducesRequestedPointCount() async {
         let pixels = [Float](repeating: 0.5, count: 50 * 32)
         let map = DensityMap(width: 50, height: 32, pixels: pixels)
         var settings = DrawingSettings.defaults
@@ -103,7 +140,11 @@ final class VoronoiStipplerTests: XCTestCase {
         settings.voronoiIterations = 5  // Fast for testing
 
         let points = await VoronoiStippler.stipple(densityMap: map, settings: settings)
-        XCTAssertEqual(points.count, 100)
+        // pointCount is an upper bound; on a uniform positive-density map the
+        // count should be met, minus at most a couple of near-coincident
+        // points that lose their Voronoi cell.
+        XCTAssertLessThanOrEqual(points.count, 100)
+        XCTAssertGreaterThanOrEqual(points.count, 97)
     }
 
     func testStipplerPointsWithinBounds() async {

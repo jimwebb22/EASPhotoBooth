@@ -74,4 +74,34 @@ final class ImagePreprocessorTests: XCTestCase {
         let maxEdge = edges.max() ?? 0
         XCTAssertEqual(maxEdge, 0, "Flat image should have no edges")
     }
+
+    // MARK: — Max-pool downsampling
+
+    func testDownsampleMax2xPreservesThinEdges() {
+        // A single 1-px vertical edge line at x=7 in a 16×8 map.
+        let w = 16, h = 8
+        var pixels = [Float](repeating: 0, count: w * h)
+        for y in 0..<h { pixels[y * w + 7] = 1 }
+
+        let result = EdgeDetector.downsampleMax2x(pixels, width: w, height: h)
+        XCTAssertEqual(result.width, 8)
+        XCTAssertEqual(result.height, 4)
+        // The line survives max-pooling in output column 3 (7/2) at full strength.
+        for y in 0..<4 {
+            XCTAssertEqual(result.pixels[y * 8 + 3], 1, "Thin edge must survive max-pooling")
+        }
+        // Blank areas stay blank.
+        for y in 0..<4 {
+            XCTAssertEqual(result.pixels[y * 8 + 0], 0)
+            XCTAssertEqual(result.pixels[y * 8 + 6], 0)
+        }
+    }
+
+    func testDownsampleMax2xHalvesDimensions() {
+        let pixels = [Float](repeating: 0.5, count: 30 * 20)
+        let result = EdgeDetector.downsampleMax2x(pixels, width: 30, height: 20)
+        XCTAssertEqual(result.width, 15)
+        XCTAssertEqual(result.height, 10)
+        XCTAssertEqual(result.pixels.count, 150)
+    }
 }

@@ -75,10 +75,15 @@ public final class PathOptimizer: Sendable {
         // Merge consecutive same-direction commands into run-length commands
         let merged = mergeRunLengths(moves: moves)
 
-        // Estimate draw time: assume 100 RPM, 200 steps/rev → 333 steps/sec
-        let totalSteps = merged.reduce(0) { $0 + $1.runLength }
-        let stepsPerSecond = 333
-        let estimatedSeconds = max(1, totalSteps / stepsPerSecond)
+        // Estimate draw time from the actual encoded steps at the configured
+        // motor speed (200 steps/rev, matching the firmware). Diagonal runs
+        // step both motors sequentially, so they cost ~2× a single-axis step.
+        let weightedSteps = merged.reduce(0) { sum, move in
+            let diagonal = move.direction.dx != 0 && move.direction.dy != 0
+            return sum + move.runLength * (diagonal ? 2 : 1)
+        }
+        let stepsPerSecond = max(1.0, Double(calibration.drawingSpeedRPM) * 200.0 / 60.0)
+        let estimatedSeconds = max(1, Int((Double(weightedSteps) / stepsPerSecond).rounded()))
 
         return DrawingPath(
             moves: merged,

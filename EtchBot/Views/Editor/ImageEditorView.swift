@@ -53,14 +53,21 @@ struct ImageEditorView: View {
                         imageVM.reprocessDebounced()
                     }
 
-                // MARK: — Estimated time
+                // MARK: — Estimated time (from the actual encoded path when
+                // available; heuristic fallback while it's still encoding)
                 if imageVM.stipplePoints != nil {
                     HStack {
                         Image(systemName: "clock")
                             .foregroundColor(.secondary)
-                        Text("Estimated drawing time: ~\(imageVM.settings.estimatedDrawTimeMinutes) min")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if let path = imageVM.drawingPath {
+                            Text("Estimated drawing time: \(path.estimatedDrawTimeString)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Estimated drawing time: ~\(imageVM.settings.estimatedDrawTimeMinutes) min")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                         Spacer()
                     }
                     .padding(.horizontal)

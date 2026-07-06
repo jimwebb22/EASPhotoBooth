@@ -2,10 +2,14 @@
 // Canny edge detection implemented via vDSP convolution.
 //
 // Simplified Canny pipeline:
-//   1. Gaussian blur (noise reduction)
-//   2. Sobel gradient magnitude
+//   1. Gaussian blur — vDSP_f5x5 (noise reduction)
+//   2. Sobel gradients — vDSP_f3x3 ×2, magnitude via vDSP_vdist
 //   3. Non-maximum suppression (thin edges to 1px)
 //   4. Double-threshold hysteresis
+//
+// vDSP convolutions zero the outputs near the image border, which would
+// read as a strong spurious gradient ring; magnitudes within 3 px of the
+// border are therefore suppressed before normalization.
 
 import Foundation
 import Accelerate
@@ -46,43 +50,52 @@ public final class EdgeDetector: Sendable {
         return hysteresis(magnitude: suppressed, width: width, height: height, low: lowThreshold, high: highThreshold)
     }
 
-    // MARK: — Gaussian blur
+    // MARK: — Downsampling
+
+    /// 2×2 max-pool downsample (factor 2) for edge maps. Max pooling keeps
+    /// thin 1-px edges that averaging would wash out below threshold.
+    public static func downsampleMax2x(
+        _ pixels: [Float],
+        width: Int,
+        height: Int
+    ) -> (pixels: [Float], width: Int, height: Int) {
+        let outW = width / 2
+        let outH = height / 2
+        var out = [Float](repeating: 0, count: outW * outH)
+        for y in 0..<outH {
+            for x in 0..<outW {
+                let sx = x * 2
+                let sy = y * 2
+                var m = pixels[sy * width + sx]
+                if sx + 1 < width { m = max(m, pixels[sy * width + sx + 1]) }
+                if sy + 1 < height { m = max(m, pixels[(sy + 1) * width + sx]) }
+                if sx + 1 < width, sy + 1 < height { m = max(m, pixels[(sy + 1) * width + sx + 1]) }
+                out[y * outW + x] = m
+            }
+        }
+        return (out, outW, outH)
+    }
+
+    // MARK: — Gaussian blur (vDSP)
 
     private static func gaussianBlur(pixels: [Float], width: Int, height: Int, radius: Int) -> [Float] {
-        // 5-tap kernel: σ ≈ 1.0
-        let kernel: [Float] = [0.0625, 0.25, 0.375, 0.25, 0.0625]
-        let kLen = kernel.count
-        let padded = pixels
-        var rowBlurred = [Float](repeating: 0, count: width * height)
-        // Horizontal pass
-        for y in 0..<height {
-            for x in 0..<width {
-                var sum: Float = 0
-                for k in 0..<kLen {
-                    let sx = x + k - kLen / 2
-                    let clampedX = max(0, min(width - 1, sx))
-                    sum += padded[y * width + clampedX] * kernel[k]
-                }
-                rowBlurred[y * width + x] = sum
+        // 5×5 Gaussian = outer product of the 5-tap binomial kernel
+        // [1, 4, 6, 4, 1] / 16 (σ ≈ 1.0).
+        let tap: [Float] = [1, 4, 6, 4, 1]
+        var kernel = [Float](repeating: 0, count: 25)
+        for i in 0..<5 {
+            for j in 0..<5 {
+                kernel[i * 5 + j] = tap[i] * tap[j] / 256.0
             }
         }
         var result = [Float](repeating: 0, count: width * height)
-        // Vertical pass
-        for y in 0..<height {
-            for x in 0..<width {
-                var sum: Float = 0
-                for k in 0..<kLen {
-                    let sy = y + k - kLen / 2
-                    let clampedY = max(0, min(height - 1, sy))
-                    sum += rowBlurred[clampedY * width + x] * kernel[k]
-                }
-                result[y * width + x] = sum
-            }
+        pixels.withUnsafeBufferPointer { src in
+            vDSP_f5x5(src.baseAddress!, vDSP_Length(height), vDSP_Length(width), kernel, &result)
         }
         return result
     }
 
-    // MARK: — Sobel gradients
+    // MARK: — Sobel gradients (vDSP)
 
     private static func sobelGradients(
         pixels: [Float],
@@ -97,19 +110,23 @@ public final class EdgeDetector: Sendable {
         let sobelX: [Float] = [-1, 0, 1, -2, 0, 2, -1, 0, 1]
         let sobelY: [Float] = [-1, -2, -1, 0, 0, 0, 1, 2, 1]
 
-        for y in 1..<(height - 1) {
-            for x in 1..<(width - 1) {
-                var sx: Float = 0; var sy: Float = 0
-                for ky in 0..<3 {
-                    for kx in 0..<3 {
-                        let px = pixels[(y + ky - 1) * width + (x + kx - 1)]
-                        sx += px * sobelX[ky * 3 + kx]
-                        sy += px * sobelY[ky * 3 + kx]
-                    }
+        pixels.withUnsafeBufferPointer { src in
+            vDSP_f3x3(src.baseAddress!, vDSP_Length(height), vDSP_Length(width), sobelX, &gx)
+            vDSP_f3x3(src.baseAddress!, vDSP_Length(height), vDSP_Length(width), sobelY, &gy)
+        }
+
+        // magnitude = sqrt(gx² + gy²)
+        vDSP_vdist(gx, 1, gy, 1, &mag, 1, vDSP_Length(n))
+
+        // Suppress the convolution border: the blur/Sobel outputs are zeroed
+        // near the edge of the buffer, which otherwise reads as a strong
+        // gradient ring around the image.
+        let margin = min(3, width / 2, height / 2)
+        for y in 0..<height {
+            for x in 0..<width {
+                if x < margin || x >= width - margin || y < margin || y >= height - margin {
+                    mag[y * width + x] = 0
                 }
-                gx[y * width + x] = sx
-                gy[y * width + x] = sy
-                mag[y * width + x] = (sx * sx + sy * sy).squareRoot()
             }
         }
 

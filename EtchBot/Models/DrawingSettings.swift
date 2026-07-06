@@ -21,8 +21,9 @@ public struct DrawingSettings: Codable, Sendable, Equatable {
     public var renderStyle: RenderStyle
 
     // MARK: — Stippling density
-    /// Number of stipple points (Voronoi seeds). Controls "opacity"/detail.
-    /// Range: 500…6000. Default: 2500.
+    /// Maximum number of stipple points (Voronoi seeds). Controls
+    /// "opacity"/detail — sparse images naturally yield fewer points.
+    /// Range: 500…10000. Default: 2500, auto-tuned per image on load.
     public var pointCount: Int
 
     // MARK: — Image preprocessing
@@ -71,8 +72,19 @@ public struct DrawingSettings: Codable, Sendable, Equatable {
         tspStartingPositions: 8
     )
 
+    // MARK: — Adaptive density
+
+    /// Suggested point count for an image, from the mean of its density map
+    /// (post tone-shaping, so blank background contributes zero). Stipple
+    /// counts should grow roughly with the square root of ink coverage:
+    /// tone is conveyed by dot spacing, which scales with sqrt(density).
+    public static func adaptivePointCount(meanDensity: Double) -> Int {
+        let suggested = Int((6000.0 * meanDensity.clamped(to: 0...1).squareRoot()).rounded())
+        return suggested.clamped(to: 800...6000)
+    }
+
     // MARK: — Slider bounds (used by UI)
-    public static let pointCountRange: ClosedRange<Int> = 500...6000
+    public static let pointCountRange: ClosedRange<Int> = 500...10000
     public static let contrastRange: ClosedRange<Double> = 0.5...2.0
     public static let toneGammaRange: ClosedRange<Double> = 1.0...2.5
     public static let claheStrengthRange: ClosedRange<Double> = 0.0...1.0
