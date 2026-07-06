@@ -1,7 +1,7 @@
 // VoronoiDiagram.swift — EtchBot
 // Discrete pixel-based Voronoi diagram computation.
 //
-// For the stipple count ranges used (500–6000 points over a 500×320 grid),
+// For the stipple count ranges used (500–6000 points over a ~500×343 grid),
 // a pixel-based approach accelerated by a KD-tree provides the best balance of
 // correctness, performance, and implementation simplicity on iOS.
 //

@@ -4,7 +4,7 @@
 import Foundation
 
 /// A stipple point in Etch-a-Sketch drawing-space coordinates.
-/// Coordinates are in the working resolution (0...500 x, 0...320 y by default).
+/// Coordinates are in the working resolution (ImagePreprocessor.workingWidth/Height).
 public struct StipplePoint: Sendable, Equatable, Hashable {
     public var x: Float
     public var y: Float

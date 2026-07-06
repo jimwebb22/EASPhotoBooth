@@ -15,11 +15,14 @@ public struct CalibrationData: Codable, Sendable, Equatable {
     public var stepsPerMmVertical: Double
 
     // MARK: — Backlash compensation
-    /// Additional steps to inject when horizontal direction reverses, in steps.
-    /// Default: 60 steps (~1.5mm at 40 steps/mm).
+    /// Slack take-up steps applied by the FIRMWARE when the horizontal axis
+    /// reverses direction. The app never injects these into the encoded path;
+    /// it only syncs the value to the device via the BLE calibration write.
+    /// Default 60 steps (~1.5mm at 40 steps/mm) is a placeholder until
+    /// measured with the calibration wizard on real hardware.
     public var backlashHorizontalSteps: Int
 
-    /// Additional steps to inject when vertical direction reverses, in steps.
+    /// Firmware slack take-up steps for vertical axis reversals (see above).
     public var backlashVerticalSteps: Int
 
     // MARK: — Home offset

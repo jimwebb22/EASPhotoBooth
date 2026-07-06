@@ -152,31 +152,28 @@ public final class ImageProcessingViewModel: ObservableObject {
 
     private func renderPreviewImage(points: [StipplePoint]) -> UIImage? {
         guard points.count >= 2 else { return nil }
-        let size = CGSize(width: 500, height: 320)
+        // Render with the same uniform transform PathOptimizer uses to map
+        // working-space points onto the drawing area — the preview must show
+        // exactly what will be drawn. No bounding-box normalization: that
+        // stretched the drawing non-uniformly and hid composition errors.
+        let displayScale: CGFloat = 2  // uniform upscale for a crisp preview
+        let size = CGSize(
+            width: CGFloat(ImagePreprocessor.workingWidth) * displayScale,
+            height: CGFloat(ImagePreprocessor.workingHeight) * displayScale
+        )
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { ctx in
             // Background
             UIColor(Color.etchGrey).setFill()
             UIRectFill(CGRect(origin: .zero, size: size))
 
-            // Scale points to image size
-            let xs = points.map { $0.x }
-            let ys = points.map { $0.y }
-            let minX = xs.min()!; let maxX = xs.max()!
-            let minY = ys.min()!; let maxY = ys.max()!
-            let rangeX = max(maxX - minX, 1)
-            let rangeY = max(maxY - minY, 1)
-
             func px(_ p: StipplePoint) -> CGPoint {
-                CGPoint(
-                    x: CGFloat((p.x - minX) / rangeX) * size.width,
-                    y: CGFloat((p.y - minY) / rangeY) * size.height
-                )
+                CGPoint(x: CGFloat(p.x) * displayScale, y: CGFloat(p.y) * displayScale)
             }
 
             UIColor(Color.etchDark).setStroke()
             let path = UIBezierPath()
-            path.lineWidth = 1.0
+            path.lineWidth = 1.5
             path.lineCapStyle = .round
             path.lineJoinStyle = .round
             path.move(to: px(points[0]))

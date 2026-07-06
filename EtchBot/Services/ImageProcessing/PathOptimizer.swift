@@ -3,10 +3,14 @@
 //
 // Steps:
 //   1. Scale stipple coordinates → physical motor steps (using CalibrationData)
-//   2. Inject backlash compensation moves on direction reversals
-//   3. Decompose each point-to-point segment into Bresenham line steps
-//   4. Run-length encode consecutive steps in the same direction
-//   5. Return an array of MoveCommand ready for DrawingPathEncoder
+//   2. Decompose each point-to-point segment into Bresenham line steps
+//   3. Run-length encode consecutive steps in the same direction
+//   4. Return an array of MoveCommand ready for DrawingPathEncoder
+//
+// Backlash compensation is owned entirely by the firmware (MotorController
+// injects slack take-up steps on axis reversal, using the values pushed via
+// the BLE calibration write). The encoded path is purely geometric —
+// compensating here as well would double-compensate every reversal.
 
 import Foundation
 
@@ -39,7 +43,7 @@ public final class PathOptimizer: Sendable {
         let scaleY = Double(stepsH) / Double(densityMapHeight)
 
         // Convert stipple points to integer motor step coordinates
-        var stepCoords: [(x: Int, y: Int)] = tour.map { idx in
+        let stepCoords: [(x: Int, y: Int)] = tour.map { idx in
             let p = points[idx]
             return (
                 x: Int((Double(p.x) * scaleX).rounded()),
@@ -47,47 +51,22 @@ public final class PathOptimizer: Sendable {
             )
         }
 
-        // Build raw step sequence via Bresenham with backlash injection
+        // Build raw step sequence via Bresenham decomposition
         var moves: [MoveCommand] = []
         moves.reserveCapacity(tour.count * 10)
 
         var currentX = stepCoords[0].x
         var currentY = stepCoords[0].y
-        var lastDX = 0  // last horizontal direction: -1, 0, +1
-        var lastDY = 0  // last vertical direction
 
         for i in 1..<stepCoords.count {
             let target = stepCoords[i]
-            let dx = target.x - currentX
-            let dy = target.y - currentY
-            guard dx != 0 || dy != 0 else { continue }
+            guard target.x != currentX || target.y != currentY else { continue }
 
-            // Determine axis directions for this segment
-            let signX = dx == 0 ? 0 : (dx > 0 ? 1 : -1)
-            let signY = dy == 0 ? 0 : (dy > 0 ? 1 : -1)
-
-            // Backlash compensation: inject steps on direction reversal
-            if lastDX != 0 && signX != 0 && signX != lastDX {
-                let backlash = calibration.backlashHorizontalSteps
-                let dir: StepDirection = signX > 0 ? .east : .west
-                appendMove(direction: dir, steps: backlash, into: &moves)
-                currentX += signX * backlash
-            }
-            if lastDY != 0 && signY != 0 && signY != lastDY {
-                let backlash = calibration.backlashVerticalSteps
-                let dir: StepDirection = signY > 0 ? .north : .south
-                appendMove(direction: dir, steps: backlash, into: &moves)
-                currentY += signY * backlash
-            }
-
-            // Bresenham decomposition
             let bresenhamSteps = bresenham(fromX: currentX, fromY: currentY, toX: target.x, toY: target.y)
             for step in bresenhamSteps {
                 appendMove(direction: step, steps: 1, into: &moves)
             }
 
-            lastDX = signX
-            lastDY = signY
             currentX = target.x
             currentY = target.y
         }

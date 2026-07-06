@@ -221,9 +221,23 @@ WS0–WS4a are fully independent: five agents can start simultaneously. Each wor
 3. **Human review loop:** WS0.4 snapshot PGMs per fixture per branch — Jim reviews side-by-side; algorithm aesthetics can't be fully asserted numerically.
 4. **Hardware validation (Jim, after merge):** one physical test drawing per milestone — (1) after WS1 (reversal artifacts gone, aspect correct), (2) after WS2+WS3 (clean backgrounds, tighter tour), (3) after WS4b (contour-following lines).
 
-## Part 4 — Open questions for Jim
+## Part 4 — Decisions & open questions
 
-1. **Backlash ownership (WS1.2):** the plan removes app-side compensation and makes firmware the single owner. Fine? (Alternative: app-side only, and zero the firmware defaults — but firmware-side also protects calibration/homing moves.)
-2. **Measured backlash:** are the 60-step (~1.5 mm) defaults from real measurement? If actual slack is smaller, part of the current artifact severity shrinks after A1/A2 anyway.
+**Decided (Jim, 2026-07-06):**
+
+1. **Backlash ownership (WS1.2): firmware is the sole owner.** The app never injects compensation into the encoded path; it only syncs calibration values to the device via the BLE calibration write. *(Implemented.)*
+2. **The 60-step backlash defaults are placeholders**, not measured values. Real values come from the calibration wizard on hardware; doc comments updated to say so.
+
+**Still open:**
+
 3. **Draw-time budget:** smoothing (WS5) and higher point counts (WS6.3) increase step counts and therefore drawing time. Is there a target ceiling (e.g. ≤ 10 min) that should constrain defaults?
 4. **BLE protocol change (WS5.2):** acceptable to bump the binary protocol version if the move-count ceiling needs raising? Requires reflashing firmware.
+
+## Part 5 — Status log
+
+- **2026-07-06 — WS1 complete, WS0 complete** (this branch):
+  - WS1.1/1.2: app-side backlash injection removed from `PathOptimizer`; firmware is sole owner. Firmware slack take-up steps no longer counted into `_posX/_posY` pen telemetry (`motor_controller.cpp`).
+  - WS1.3: working canvas corrected to 500×343 (matches 175:120 physical aspect); constants moved to platform-independent `WorkingCanvas` in `Utilities/Extensions.swift`.
+  - WS1.4: preview renders with the plotter's uniform transform (no bounding-box stretch).
+  - WS0: `PlotSimulator` (lash-model trajectory replay), synthetic `DensityFixtures`, and `PipelineQualityTests` (geometric-path invariants asserted; WS2/WS3 baseline metrics reported, not yet asserted).
+  - Note: changes were authored in a Linux container without a Swift toolchain (network policy blocks swift.org) — **run `swift test` on macOS/Xcode to verify before merging.**

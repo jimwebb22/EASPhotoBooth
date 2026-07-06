@@ -2,7 +2,7 @@
 // Converts a UIImage into a normalized DensityMap suitable for Voronoi stippling.
 //
 // Pipeline:
-//   1. Downscale to working resolution (500 × 320 max)
+//   1. Downscale to working resolution (500 × 343, matches drawing-area aspect)
 //   2. Convert to 8-bit grayscale via vImage
 //   3. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
 //   4. Invert: dark pixels → high density (more dots)
@@ -23,9 +23,10 @@ public enum ImagePreprocessorError: Error {
 public final class ImagePreprocessor: Sendable {
 
     // MARK: — Constants
-    /// Working resolution — matches Etch-a-Sketch proportions (500:320 ≈ 25:16).
-    public static let workingWidth = 500
-    public static let workingHeight = 320
+    /// Working resolution — defined by WorkingCanvas (platform-independent),
+    /// which matches the physical drawing-area aspect ratio.
+    public static let workingWidth = WorkingCanvas.width
+    public static let workingHeight = WorkingCanvas.height
 
     // MARK: — Public entry point
 

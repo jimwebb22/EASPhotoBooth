@@ -21,6 +21,18 @@ public extension Double {
     }
 }
 
+// MARK: — Working canvas
+
+/// The working-resolution canvas the pipeline operates in.
+/// Its aspect ratio MUST match the physical drawing area (175mm × 120mm,
+/// see CalibrationData) — PathOptimizer maps canvas pixels to motor steps
+/// with independent X/Y scales, so any mismatch stretches the drawing.
+/// 500 × 343 ≈ 175:120. Platform-independent so SPM tests can reference it.
+public enum WorkingCanvas {
+    public static let width = 500
+    public static let height = 343  // round(500 * 120 / 175)
+}
+
 // MARK: — 2D density map helpers
 
 /// A flat 2D array of Float values, row-major (row * width + col).

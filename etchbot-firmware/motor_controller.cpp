@@ -52,16 +52,17 @@ void MotorController::move(StepDir dir, uint16_t steps) {
     const int8_t sx = xSign(dir);
     const int8_t sy = ySign(dir);
 
-    // ── Firmware-side backlash compensation ──────────────────────────────────
-    // Inject extra steps when an axis reverses direction.
-    // This is a secondary layer; the iOS app pre-compensates the path.
-    // The firmware layer catches calibration-routine moves that bypass iOS compensation.
+    // ── Backlash compensation (firmware is the SOLE owner) ──────────────────
+    // Inject slack take-up steps when an axis reverses direction. The iOS app
+    // sends purely geometric paths and never pre-compensates; the values used
+    // here arrive via the BLE calibration write. Slack take-up steps must not
+    // change the logical pen position (_posX/_posY track the pen, not the
+    // motor shaft), so they are stepped without position bookkeeping.
     if (sx != 0 && _lastDirX != 0 && sx != _lastDirX) {
         uint16_t bl = _backlashH;
         DBG_PRINTF("[MOTOR] X backlash: %u steps %s\n", bl, sx > 0 ? "FORWARD" : "BACKWARD");
         for (uint16_t i = 0; i < bl; i++) {
             _stepX(sx > 0 ? FORWARD : BACKWARD);
-            _posX += sx;
         }
     }
     if (sy != 0 && _lastDirY != 0 && sy != _lastDirY) {
@@ -69,7 +70,6 @@ void MotorController::move(StepDir dir, uint16_t steps) {
         DBG_PRINTF("[MOTOR] Y backlash: %u steps %s\n", bl, sy > 0 ? "FORWARD" : "BACKWARD");
         for (uint16_t i = 0; i < bl; i++) {
             _stepY(sy > 0 ? FORWARD : BACKWARD);
-            _posY += sy;
         }
     }
 
