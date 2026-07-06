@@ -190,8 +190,8 @@ final class PipelineQualityTests: XCTestCase {
 
         let map = DensityFixtures.silhouette()
         let points = await VoronoiStippler.stipple(densityMap: map, settings: settings)
-        let tour = await TSPSolver.solve(points: points, settings: settings)
-        let ordered = TSPSolver.breakTourNearHome(tour: tour, points: points)
+        let tour = await TSPSolver.solve(points: points, settings: settings, seed: 12345)
+        let ordered = TSPSolver.breakTourAtLongestEdge(tour: tour, points: points)
 
         var openLength = 0.0
         var longestEdge = 0.0

@@ -10,6 +10,24 @@ struct DensitySliderView: View {
     var body: some View {
         VStack(spacing: 16) {
 
+            // MARK: — Render style
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Line Style")
+                    .font(.subheadline.weight(.semibold))
+                Picker("Line Style", selection: $settings.renderStyle) {
+                    Text("Contour").tag(DrawingSettings.RenderStyle.hybrid)
+                    Text("Classic Dots").tag(DrawingSettings.RenderStyle.stipple)
+                }
+                .pickerStyle(.segmented)
+                Text(settings.renderStyle == .hybrid
+                     ? "Lines follow the image's contours; dots fill in shading."
+                     : "Classic TSP art: one line hopping between shading dots.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Divider()
+
             // MARK: — Density (point count)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -58,19 +76,42 @@ struct DensitySliderView: View {
                 .tint(Color.etchDark)
             }
 
-            Divider()
+            // MARK: — Edge emphasis (stipple style only; the hybrid style
+            // draws contours explicitly)
+            if settings.renderStyle == .stipple {
+                Divider()
 
-            // MARK: — Edge emphasis toggle
-            Toggle(isOn: $settings.edgeEmphasisEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Edge Emphasis")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Adds defined contour lines (30% edges, 70% tone)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                Toggle(isOn: $settings.edgeEmphasisEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Edge Emphasis")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Blends detected contours into the dot density")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(Color.etchRed)
+
+                if settings.edgeEmphasisEnabled {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Edge Strength")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text(String(format: "%.0f%%", settings.edgeWeight * 100))
+                                .font(.caption)
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(
+                            value: $settings.edgeWeight,
+                            in: DrawingSettings.edgeWeightRange,
+                            step: 0.05
+                        )
+                        .tint(Color.etchDark)
+                    }
                 }
             }
-            .tint(Color.etchRed)
         }
         .padding()
         .background(Color(.systemBackground))

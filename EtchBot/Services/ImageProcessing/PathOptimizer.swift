@@ -21,7 +21,8 @@ public final class PathOptimizer: Sendable {
     /// Convert an ordered TSP tour into a DrawingPath.
     ///
     /// - Parameters:
-    ///   - tour: Ordered point indices from TSPSolver.breakTourNearHome.
+    ///   - tour: Ordered point indices (e.g. from TSPSolver.breakTourAtLongestEdge),
+    ///     or the identity order when `points` is already an ordered polyline.
     ///   - points: Stipple points in density-map coordinates.
     ///   - densityMapSize: (width, height) of the working resolution.
     ///   - calibration: Device calibration data.

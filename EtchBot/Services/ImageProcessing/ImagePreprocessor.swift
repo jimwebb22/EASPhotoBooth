@@ -20,6 +20,16 @@ public enum ImagePreprocessorError: Error {
     case conversionFailed(String)
 }
 
+/// Output of the preprocessing stage.
+public struct PreprocessedImage: Sendable {
+    /// Tonal density map (with edge blend applied when style is .stipple
+    /// and edge emphasis is on).
+    public let densityMap: DensityMap
+    /// Raw (undilated) Canny edge map at working resolution, for contour
+    /// tracing. Present when the render style or edge emphasis needs it.
+    public let edgeMap: [Float]?
+}
+
 public final class ImagePreprocessor: Sendable {
 
     // MARK: — Constants
@@ -30,15 +40,15 @@ public final class ImagePreprocessor: Sendable {
 
     // MARK: — Public entry point
 
-    /// Convert a UIImage into a DensityMap.
+    /// Convert a UIImage into a PreprocessedImage (density map + edge map).
     /// - Parameters:
     ///   - image: Source image (any size).
-    ///   - settings: Drawing settings (contrast, edge emphasis, etc.).
-    /// - Returns: DensityMap at working resolution.
+    ///   - settings: Drawing settings (contrast, edge emphasis, style, etc.).
+    /// - Returns: PreprocessedImage at working resolution.
     public static func process(
         image: UIImage,
         settings: DrawingSettings
-    ) throws -> DensityMap {
+    ) throws -> PreprocessedImage {
         // 1. Resize to working resolution (aspect-fill then crop)
         guard let resized = resizedImage(image, to: CGSize(width: workingWidth, height: workingHeight)) else {
             throw ImagePreprocessorError.conversionFailed("Resize failed")
@@ -60,24 +70,59 @@ public final class ImagePreprocessor: Sendable {
         //    Input grayPixels: 0=black, 1=white → invert to get density
         var densityPixels = grayPixels.map { 1.0 - $0 }
 
-        // 6. Blend with edge map if enabled
-        if settings.edgeEmphasisEnabled {
-            let edgeMap = try EdgeDetector.canny(
+        // 6. Edge map: the hybrid style traces it into contour chains;
+        //    the stipple style blends it into the density.
+        var edgeMap: [Float]? = nil
+        if settings.renderStyle == .hybrid || settings.edgeEmphasisEnabled {
+            edgeMap = try EdgeDetector.canny(
                 pixels: grayPixels,      // pass original (not inverted) for edge detection
                 width: workingWidth,
                 height: workingHeight
             )
+        }
+
+        // 7. Blend edges into density — stipple style only. The hybrid style
+        //    draws contours explicitly, so blending would double-emphasize.
+        //    Dilate 1px first so the thin Canny lines survive stippling.
+        if settings.renderStyle == .stipple, settings.edgeEmphasisEnabled, let edges = edgeMap {
+            let dilated = dilate3x3(edges, width: workingWidth, height: workingHeight)
             let w = Float(settings.edgeWeight)
             let t = 1.0 - w
             for i in 0..<densityPixels.count {
-                densityPixels[i] = (densityPixels[i] * t + edgeMap[i] * w).clamped(to: 0...1)
+                densityPixels[i] = (densityPixels[i] * t + dilated[i] * w).clamped(to: 0...1)
             }
         }
 
-        // 7. Clamp to [0, 1]
+        // 8. Clamp to [0, 1]
         densityPixels = densityPixels.map { $0.clamped(to: 0...1) }
 
-        return DensityMap(width: workingWidth, height: workingHeight, pixels: densityPixels)
+        return PreprocessedImage(
+            densityMap: DensityMap(width: workingWidth, height: workingHeight, pixels: densityPixels),
+            edgeMap: edgeMap
+        )
+    }
+
+    // MARK: — Private: 3×3 dilation
+
+    /// Morphological dilation with a 3×3 kernel (max of 8-neighborhood).
+    private static func dilate3x3(_ pixels: [Float], width: Int, height: Int) -> [Float] {
+        var result = pixels
+        for y in 0..<height {
+            for x in 0..<width {
+                var maxVal = pixels[y * width + x]
+                for dy in -1...1 {
+                    for dx in -1...1 {
+                        let nx = x + dx
+                        let ny = y + dy
+                        guard nx >= 0, nx < width, ny >= 0, ny < height else { continue }
+                        let v = pixels[ny * width + nx]
+                        if v > maxVal { maxVal = v }
+                    }
+                }
+                result[y * width + x] = maxVal
+            }
+        }
+        return result
     }
 
     // MARK: — Private: Resize

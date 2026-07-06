@@ -11,12 +11,22 @@ final class ImageProcessingViewModelTests: XCTestCase {
 
     func testDefaultSettings() {
         let settings = DrawingSettings.defaults
+        XCTAssertEqual(settings.renderStyle, .hybrid)
         XCTAssertEqual(settings.pointCount, 2500)
         XCTAssertEqual(settings.contrastMultiplier, 1.0)
-        XCTAssertFalse(settings.edgeEmphasisEnabled)
-        XCTAssertEqual(settings.edgeWeight, 0.3)
+        XCTAssertTrue(settings.edgeEmphasisEnabled)
+        XCTAssertEqual(settings.edgeWeight, 0.35)
         XCTAssertEqual(settings.voronoiIterations, 40)
         XCTAssertEqual(settings.tspStartingPositions, 8)
+    }
+
+    func testSettingsCodableRoundTrip() throws {
+        var settings = DrawingSettings.defaults
+        settings.renderStyle = .stipple
+        settings.pointCount = 3200
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(DrawingSettings.self, from: data)
+        XCTAssertEqual(decoded, settings)
     }
 
     func testEstimatedDrawTimeScalesWithPointCount() {

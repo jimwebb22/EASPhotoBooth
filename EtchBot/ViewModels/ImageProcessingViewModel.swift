@@ -64,22 +64,48 @@ public final class ImageProcessingViewModel: ObservableObject {
             drawingPath = nil
 
             do {
-                // Step 1: Preprocess
+                // Step 1: Preprocess (density map + optional edge map)
                 currentPhase = .preprocessing
                 processingDetail = "Converting to grayscale…"
                 processingProgress = 0.05
-                let densityMap = try await Task.detached(priority: .userInitiated) {
-                    try ImagePreprocessor.process(image: source, settings: self.settings)
+                let localSettings = settings
+                let preprocessed = try await Task.detached(priority: .userInitiated) {
+                    try ImagePreprocessor.process(image: source, settings: localSettings)
                 }.value
+
+                guard !Task.isCancelled else { return }
+
+                // Step 2 (hybrid style): trace contour chains and remove their
+                // coverage from the tonal density so stipples don't double-draw.
+                var chains: [[StipplePoint]] = []
+                var stippleDensity = preprocessed.densityMap
+                if localSettings.renderStyle == .hybrid, let edgeMap = preprocessed.edgeMap {
+                    processingDetail = "Tracing contours…"
+                    processingProgress = 0.12
+                    let (tracedChains, reducedDensity) = await Task.detached(priority: .userInitiated) {
+                        () -> ([[StipplePoint]], DensityMap) in
+                        let traced = ContourTracer.trace(
+                            edgeMap: edgeMap,
+                            width: ImagePreprocessor.workingWidth,
+                            height: ImagePreprocessor.workingHeight
+                        )
+                        let reduced = ContourTracer.subtractChains(
+                            from: preprocessed.densityMap,
+                            chains: traced
+                        )
+                        return (traced, reduced)
+                    }.value
+                    chains = tracedChains
+                    stippleDensity = reducedDensity
+                }
 
                 guard !Task.isCancelled else { return }
                 processingProgress = 0.15
                 currentPhase = .stippling
 
-                // Step 2: Voronoi stippling
-                let localSettings = settings
+                // Step 3: Voronoi stippling (over the chain-reduced density in hybrid)
                 let points = await VoronoiStippler.stipple(
-                    densityMap: densityMap,
+                    densityMap: stippleDensity,
                     settings: localSettings
                 ) { [weak self] progress in
                     Task { @MainActor [weak self] in
@@ -93,21 +119,35 @@ public final class ImageProcessingViewModel: ObservableObject {
                 processingProgress = 0.50
                 currentPhase = .solvingTSP
 
-                // Step 3: TSP solve
-                let tour = await TSPSolver.solve(
-                    points: points,
-                    settings: localSettings
-                ) { [weak self] progress in
-                    Task { @MainActor [weak self] in
-                        guard let self else { return }
-                        self.processingDetail = "\(progress.phase.rawValue) (pass \(progress.passNumber))"
-                        self.processingProgress = 0.50 + progress.progressFraction * 0.30
+                // Step 4: Order everything into a single continuous polyline.
+                let orderedPoints: [StipplePoint]
+                if localSettings.renderStyle == .hybrid && !chains.isEmpty {
+                    // Chains + stipples via the chained-tour solver.
+                    processingDetail = "Routing continuous line…"
+                    let elements = chains.map { TourElement.chain($0) }
+                                 + points.map { TourElement.point($0) }
+                    orderedPoints = await Task.detached(priority: .userInitiated) {
+                        ChainedTourSolver.solve(elements: elements)
+                    }.value
+                } else {
+                    // Pure stipple TSP.
+                    let tour = await TSPSolver.solve(
+                        points: points,
+                        settings: localSettings
+                    ) { [weak self] progress in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            self.processingDetail = "\(progress.phase.rawValue) (pass \(progress.passNumber))"
+                            self.processingProgress = 0.50 + progress.progressFraction * 0.30
+                        }
                     }
+                    guard !Task.isCancelled else { return }
+                    // Drop the tour's longest edge so the worst jump is never drawn.
+                    let orderedTour = TSPSolver.breakTourAtLongestEdge(tour: tour, points: points)
+                    orderedPoints = orderedTour.map { points[$0] }
                 }
 
                 guard !Task.isCancelled else { return }
-                let orderedTour = TSPSolver.breakTourNearHome(tour: tour, points: points)
-                let orderedPoints = orderedTour.map { points[$0] }
                 stipplePoints = orderedPoints
 
                 processingProgress = 0.80

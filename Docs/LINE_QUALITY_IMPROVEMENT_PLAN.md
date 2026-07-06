@@ -235,6 +235,16 @@ WS0–WS4a are fully independent: five agents can start simultaneously. Each wor
 
 ## Part 5 — Status log
 
+- **2026-07-06 — WS3 complete, WS4a complete, WS4b complete** (this branch):
+  - WS3.1/3.2: `TSPSolver` rewritten — precomputed k-nearest candidate lists, O(1) tour-position lookup in 2-opt (no more `firstIndex` scans), Or-opt relocation of 1–3-node segments (forward/reversed) with O(1) cost deltas.
+  - WS3.3: multiple NN starts now use distinct seeded starting points (`startIdx` was previously drawn and ignored); `solve(seed:)` gives reproducible tours for tests.
+  - WS3.4: `breakTourAtLongestEdge` drops the tour's worst edge instead of an arbitrary one; ViewModel switched to it.
+  - WS3.5: new `ChainedTourSolver` — orders mixed chains+points with greedy nearest-endpoint construction plus orientation-aware 2-opt over connectors.
+  - WS4a: edge emphasis on by default (weight 0.35, slider exposed), Canny map dilated 1px before blending; blend applies to the stipple style only.
+  - WS4b: hybrid contour+stipple pipeline — new `ContourTracer` (crossing-number junction detection, open-chain + loop tracing, Douglas-Peucker simplification), chain coverage subtracted from the density map before stippling, `renderStyle` setting (`.hybrid` default / `.stipple`), editor style picker, ViewModel integration.
+  - Tests: `ContourTracerTests`, `ChainedTourSolverTests`, TSP determinism/permutation/longest-edge tests; settings-defaults test updated.
+  - Same toolchain caveat as WS1: authored without local Swift — **run `swift test` on macOS/Xcode before merging.**
+
 - **2026-07-06 — WS1 complete, WS0 complete** (this branch):
   - WS1.1/1.2: app-side backlash injection removed from `PathOptimizer`; firmware is sole owner. Firmware slack take-up steps no longer counted into `_posX/_posY` pen telemetry (`motor_controller.cpp`).
   - WS1.3: working canvas corrected to 500×343 (matches 175:120 physical aspect); constants moved to platform-independent `WorkingCanvas` in `Utilities/Extensions.swift`.

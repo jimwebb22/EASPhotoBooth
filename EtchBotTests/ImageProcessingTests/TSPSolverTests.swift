@@ -46,6 +46,57 @@ final class TSPSolverTests: XCTestCase {
         XCTAssertEqual(broken.first, 2, "Tour should start at point nearest to home (index 2)")
     }
 
+    func testSolveIsDeterministicWithSeed() async {
+        var rng = SeededRandomNumberGenerator(seed: 99)
+        let points: [StipplePoint] = (0..<120).map { _ in
+            .init(x: Float.random(in: 0..<500, using: &rng),
+                  y: Float.random(in: 0..<343, using: &rng))
+        }
+        let tourA = await TSPSolver.solve(points: points, settings: .defaults, seed: 42)
+        let tourB = await TSPSolver.solve(points: points, settings: .defaults, seed: 42)
+        XCTAssertEqual(tourA, tourB, "Same seed must reproduce the same tour")
+    }
+
+    func testSolveImprovesOverWorstCaseOrder() async {
+        var rng = SeededRandomNumberGenerator(seed: 7)
+        let points: [StipplePoint] = (0..<200).map { _ in
+            .init(x: Float.random(in: 0..<500, using: &rng),
+                  y: Float.random(in: 0..<343, using: &rng))
+        }
+        let tour = await TSPSolver.solve(points: points, settings: .defaults, seed: 1)
+        XCTAssertEqual(Set(tour).count, points.count, "Tour must be a permutation")
+
+        let solvedLength = TSPSolver.tourLength(points: points, tour: tour)
+        let identityLength = TSPSolver.tourLength(points: points, tour: Array(0..<points.count))
+        XCTAssertLessThan(solvedLength, identityLength,
+            "Optimized tour must beat the random input order")
+    }
+
+    func testBreakTourAtLongestEdge() {
+        // Edge 0→1 is by far the longest; breaking there yields [1, 2, 3, 0]
+        // so the long edge becomes the undrawn wrap-around.
+        let points: [StipplePoint] = [
+            .init(x: 0, y: 0),
+            .init(x: 100, y: 100),
+            .init(x: 101, y: 100),
+            .init(x: 5, y: 0),
+        ]
+        let broken = TSPSolver.breakTourAtLongestEdge(tour: [0, 1, 2, 3], points: points)
+        XCTAssertEqual(broken, [1, 2, 3, 0])
+    }
+
+    func testBreakTourAtLongestEdgeKeepsOrderWhenWrapEdgeIsLongest() {
+        // Wrap-around edge 3→0 is the longest; tour should be unchanged.
+        let points: [StipplePoint] = [
+            .init(x: 0, y: 0),
+            .init(x: 1, y: 0),
+            .init(x: 2, y: 0),
+            .init(x: 200, y: 200),
+        ]
+        let broken = TSPSolver.breakTourAtLongestEdge(tour: [0, 1, 2, 3], points: points)
+        XCTAssertEqual(broken, [0, 1, 2, 3])
+    }
+
     func testTourLengthCalculation() {
         let points: [StipplePoint] = [
             .init(x: 0, y: 0),
