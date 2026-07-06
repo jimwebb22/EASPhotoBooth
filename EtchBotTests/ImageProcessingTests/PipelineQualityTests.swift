@@ -146,12 +146,13 @@ final class PipelineQualityTests: XCTestCase {
         XCTAssertEqual(traj.finalPen.y, 2)
     }
 
-    // MARK: — Baseline quality metrics (reported, not yet asserted)
+    // MARK: — Stippling quality (WS2: asserted)
 
-    /// Records the stippling-quality baseline for the WS2 workstream.
-    /// Once WS2 lands (white cutoff, no uniform fill), the blank-fixture
-    /// metric below should be asserted to be zero.
-    func testStipplingQualityBaselineMetrics() async {
+    /// WS2 invariant: stipple points must not land in blank (zero-density)
+    /// regions. The pre-WS2 stippler had a 2% acceptance floor, a uniform
+    /// fallback fill, and a Voronoi background weight, all of which put dots
+    /// in white areas — this test fails against that code.
+    func testStipplePointsStayOutOfBlankRegions() async {
         var settings = DrawingSettings.defaults
         settings.pointCount = 200
         settings.voronoiIterations = 8
@@ -162,7 +163,7 @@ final class PipelineQualityTests: XCTestCase {
             ("silhouette", DensityFixtures.silhouette()),
         ]
 
-        print("─── Stippling quality baseline ───────────────────────────")
+        print("─── Stippling quality ────────────────────────────────────")
         print("fixture          points   inWhiteRegion   inWhitePercent")
         for fixture in fixtures {
             let points = await VoronoiStippler.stipple(densityMap: fixture.map, settings: settings)
@@ -171,14 +172,31 @@ final class PipelineQualityTests: XCTestCase {
             let name = fixture.name.padding(toLength: 16, withPad: " ", startingAt: 0)
             print("\(name) \(points.count)      \(inWhite)              \(String(format: "%.1f", pct))%")
 
-            // Weak invariants that must always hold.
             XCTAssertFalse(points.isEmpty)
+            // ≤1% tolerance covers centroids that settle on a region boundary
+            // where bilinear interpolation reads slightly above zero.
+            XCTAssertLessThanOrEqual(pct, 1.0,
+                "\(fixture.name): stipple points leaked into blank regions")
             for p in points {
                 XCTAssertTrue(p.x >= 0 && p.x < Float(fixture.map.width))
                 XCTAssertTrue(p.y >= 0 && p.y < Float(fixture.map.height))
             }
         }
         print("──────────────────────────────────────────────────────────")
+    }
+
+    /// A fully blank density map must produce zero points (and the app
+    /// handles the empty result gracefully rather than filling uniformly).
+    func testFullyBlankMapProducesNoPoints() async {
+        let blank = DensityMap(
+            width: 60, height: 41,
+            pixels: [Float](repeating: 0, count: 60 * 41)
+        )
+        var settings = DrawingSettings.defaults
+        settings.pointCount = 100
+        settings.voronoiIterations = 3
+        let points = await VoronoiStippler.stipple(densityMap: blank, settings: settings)
+        XCTAssertTrue(points.isEmpty)
     }
 
     /// Records the tour-quality baseline for the WS3 workstream:

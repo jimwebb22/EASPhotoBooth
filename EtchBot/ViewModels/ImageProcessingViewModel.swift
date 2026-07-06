@@ -148,6 +148,13 @@ public final class ImageProcessingViewModel: ObservableObject {
                 }
 
                 guard !Task.isCancelled else { return }
+                // Blank regions get zero density (background cutoff), so a
+                // near-empty image can legitimately produce too few points.
+                guard orderedPoints.count >= 2 else {
+                    processingDetail = "No drawable content found — try raising contrast or lowering the background cutoff."
+                    isProcessing = false
+                    return
+                }
                 stipplePoints = orderedPoints
 
                 processingProgress = 0.80

@@ -235,6 +235,12 @@ WS0–WS4a are fully independent: five agents can start simultaneously. Each wor
 
 ## Part 5 — Status log
 
+- **2026-07-06 — WS2 complete** (this branch):
+  - WS2.1: rejection sampling is now strictly density-proportional (no 2% acceptance floor, no uniform fallback — `pointCount` is an upper bound); orphaned Lloyd cells are dropped instead of re-seeded; the Voronoi background weight (0.01) is removed so blank pixels contribute nothing. `PipelineQualityTests` now ASSERTS ≤1% of points in blank regions (was report-only).
+  - WS2.2: new `ToneShaper` (platform-independent, unit-tested): contrast as a mid-gray-pivoted stretch (the old multiply just brightened everything), `toneGamma` (default 1.8) for midtone/shadow separation, smoothstep `backgroundCutoff` (default 0.08); CLAHE now has a strength setting (default 0.3, 0 = off) blended with the input instead of always applying at full strength.
+  - WS2.3: editor UI gains a Shading Depth (gamma) slider and an Advanced section with CLAHE strength and Background Cutoff sliders; ViewModel gracefully reports "no drawable content" instead of erroring when a blank image yields <2 points.
+  - Same toolchain caveat: authored without local Swift — **run `swift test` on macOS/Xcode before merging.**
+
 - **2026-07-06 — WS3 complete, WS4a complete, WS4b complete** (this branch):
   - WS3.1/3.2: `TSPSolver` rewritten — precomputed k-nearest candidate lists, O(1) tour-position lookup in 2-opt (no more `firstIndex` scans), Or-opt relocation of 1–3-node segments (forward/reversed) with O(1) cost deltas.
   - WS3.3: multiple NN starts now use distinct seeded starting points (`startIdx` was previously drawn and ignored); `solve(seed:)` gives reproducible tours for tests.

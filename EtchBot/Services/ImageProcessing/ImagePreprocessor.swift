@@ -1,13 +1,15 @@
 // ImagePreprocessor.swift — EtchBot
-// Converts a UIImage into a normalized DensityMap suitable for Voronoi stippling.
+// Converts a UIImage into a PreprocessedImage (density map + edge map).
 //
 // Pipeline:
 //   1. Downscale to working resolution (500 × 343, matches drawing-area aspect)
 //   2. Convert to 8-bit grayscale via vImage
-//   3. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
-//   4. Invert: dark pixels → high density (more dots)
-//   5. Optionally blend with Canny edge map
-//   6. Output normalized DensityMap (Float32, 0 = no dot, 1 = max dot density)
+//   3. Contrast stretch pivoted on mid-gray (ToneShaper)
+//   4. CLAHE at user-controlled strength (0 = off)
+//   5. Invert: dark pixels → high density; gamma-shape tones; cut background
+//      density to zero below the cutoff so blank regions stay blank
+//   6. Canny edge map (traced into chains by the hybrid style, or dilated
+//      and blended into the density by the stipple style)
 //
 // Performance target: <200ms on iPhone 12+
 
@@ -57,18 +59,32 @@ public final class ImagePreprocessor: Sendable {
         // 2. Convert to grayscale float pixels
         var grayPixels = try toGrayscaleFloat(image: resized)
 
-        // 3. Apply contrast boost
-        if settings.contrastMultiplier != 1.0 {
-            let factor = Float(settings.contrastMultiplier)
-            applyContrastBoost(pixels: &grayPixels, factor: factor)
-        }
+        // 3. Contrast as a mid-gray-pivoted stretch (not a plain multiply,
+        //    which only brightened the image toward white).
+        ToneShaper.applyContrast(&grayPixels, multiplier: Float(settings.contrastMultiplier))
 
-        // 4. Apply CLAHE
-        applyCLAHE(pixels: &grayPixels, width: workingWidth, height: workingHeight)
+        // 4. CLAHE at user-controlled strength (full-strength CLAHE amplifies
+        //    sensor noise in flat regions into stipple-attracting density).
+        let claheStrength = Float(settings.claheStrength.clamped(to: 0...1))
+        if claheStrength > 0 {
+            let original = grayPixels
+            applyCLAHE(pixels: &grayPixels, width: workingWidth, height: workingHeight)
+            if claheStrength < 1 {
+                for i in 0..<grayPixels.count {
+                    grayPixels[i] = original[i] * (1 - claheStrength) + grayPixels[i] * claheStrength
+                }
+            }
+        }
 
         // 5. Invert: 0 = white → 0 density; 1 = black → 1 density
         //    Input grayPixels: 0=black, 1=white → invert to get density
         var densityPixels = grayPixels.map { 1.0 - $0 }
+
+        // 5b. Tone shaping: gamma for midtone/shadow separation, then the
+        //     background cutoff so blank regions get zero density (and
+        //     therefore zero stipple points).
+        ToneShaper.applyGamma(&densityPixels, gamma: Float(settings.toneGamma))
+        ToneShaper.applyBackgroundCutoff(&densityPixels, cutoff: Float(settings.backgroundCutoff))
 
         // 6. Edge map: the hybrid style traces it into contour chains;
         //    the stipple style blends it into the density.
@@ -210,17 +226,6 @@ public final class ImagePreprocessor: Sendable {
             width: vImagePixelCount(width),
             rowBytes: rowBytes
         )
-    }
-
-    // MARK: — Private: Contrast boost
-
-    /// Multiply each pixel value by `factor`, clamping result to [0, 1].
-    private static func applyContrastBoost(pixels: inout [Float], factor: Float) {
-        let n = vDSP_Length(pixels.count)
-        var f = factor
-        vDSP_vsmul(pixels, 1, &f, &pixels, 1, n)
-        var lo: Float = 0; var hi: Float = 1
-        vDSP_vclip(pixels, 1, &lo, &hi, &pixels, 1, n)
     }
 
     // MARK: — Private: CLAHE

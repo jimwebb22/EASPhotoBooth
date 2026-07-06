@@ -76,6 +76,82 @@ struct DensitySliderView: View {
                 .tint(Color.etchDark)
             }
 
+            Divider()
+
+            // MARK: — Tone (density gamma)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Shading Depth")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text(String(format: "γ %.1f", settings.toneGamma))
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                }
+                Slider(
+                    value: $settings.toneGamma,
+                    in: DrawingSettings.toneGammaRange,
+                    step: 0.1
+                )
+                .tint(Color.etchDark)
+                HStack {
+                    Text("Soft").font(.caption2).foregroundColor(.secondary)
+                    Spacer()
+                    Text("Punchy").font(.caption2).foregroundColor(.secondary)
+                }
+            }
+
+            Divider()
+
+            // MARK: — Advanced
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Adaptive Contrast (CLAHE)")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text(String(format: "%.0f%%", settings.claheStrength * 100))
+                                .font(.caption)
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(
+                            value: $settings.claheStrength,
+                            in: DrawingSettings.claheStrengthRange,
+                            step: 0.05
+                        )
+                        .tint(Color.etchDark)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Background Cutoff")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text(String(format: "%.0f%%", settings.backgroundCutoff * 100))
+                                .font(.caption)
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(
+                            value: $settings.backgroundCutoff,
+                            in: DrawingSettings.backgroundCutoffRange,
+                            step: 0.01
+                        )
+                        .tint(Color.etchDark)
+                        Text("Tones lighter than this are left blank — no stray dots in white areas.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.top, 8)
+            } label: {
+                Text("Advanced")
+                    .font(.subheadline.weight(.semibold))
+            }
+
             // MARK: — Edge emphasis (stipple style only; the hybrid style
             // draws contours explicitly)
             if settings.renderStyle == .stipple {

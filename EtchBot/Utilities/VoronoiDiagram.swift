@@ -51,8 +51,11 @@ public final class VoronoiDiagram: Sendable {
         for py in 0..<height {
             for px in 0..<width {
                 let density = densityMap.value(x: px, y: py)
-                // Small background density keeps all cells alive
-                let weight = Double(max(density, 0.01))
+                // Zero-density pixels contribute nothing: cells that cover
+                // only blank pixels become orphans (nil centroid) and the
+                // stippler drops them, keeping dots out of blank regions.
+                guard density > 0 else { continue }
+                let weight = Double(density)
                 let query = StipplePoint(x: Float(px), y: Float(py))
                 guard let nearestIdx = kdTree.nearestIndex(to: query) else { continue }
                 sumX[nearestIdx] += Double(px) * weight

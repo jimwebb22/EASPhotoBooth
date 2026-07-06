@@ -2,12 +2,15 @@
 // Weighted Voronoi Stippling (Secord's Algorithm).
 //
 // Pipeline:
-//   1. Rejection sampling: place N points with probability ∝ density.
+//   1. Rejection sampling: place up to N points with probability ∝ density.
+//      Zero-density (blank) regions NEVER receive points — settings.pointCount
+//      is an upper bound, not an exact count.
 //   2. Lloyd's relaxation (40 iterations or until convergence):
 //      a. Build KD-tree over current point positions.
 //      b. Compute density-weighted Voronoi centroids (pixel-based).
 //      c. Move each point to its cell centroid.
-//      d. Re-sample orphan cells (zero-density cells) uniformly.
+//      d. DROP orphan cells (zero-density cells) — re-seeding them would
+//         put dots back into blank regions and draw scribbles across them.
 //   3. Return ordered array of StipplePoint in Etch-a-Sketch drawing space.
 //
 // Performance target: <3 seconds for 3000 points on iPhone 12+.
@@ -61,30 +64,25 @@ public final class VoronoiStippler: Sendable {
 
             // Phase 2: Lloyd's relaxation
             for iter in 0..<maxIterations {
-                let oldPoints = points
+                guard !points.isEmpty else { break }
                 let voronoiResult = VoronoiDiagram.computeWeightedCentroids(
                     points: points,
                     densityMap: densityMap
                 )
 
-                // Move to centroids; re-sample orphans
-                for i in 0..<n {
+                // Move each point to its cell centroid; DROP orphan cells
+                // (cells with zero total density) instead of re-seeding them.
+                var newPoints: [StipplePoint] = []
+                newPoints.reserveCapacity(points.count)
+                var totalDisp: Float = 0
+                for i in 0..<points.count {
                     if let centroid = voronoiResult.centroids[i] {
-                        points[i] = centroid
-                    } else {
-                        // Orphan cell: re-sample from density map
-                        points[i] = Self.singleRejectionSample(densityMap: densityMap)
-                            ?? StipplePoint(
-                                x: Float.random(in: 0..<Float(densityMap.width)),
-                                y: Float.random(in: 0..<Float(densityMap.height))
-                            )
+                        totalDisp += points[i].distance(to: centroid)
+                        newPoints.append(centroid)
                     }
                 }
-
-                // Compute convergence
-                var totalDisp: Float = 0
-                for i in 0..<n { totalDisp += oldPoints[i].distance(to: points[i]) }
-                let avgDisp = totalDisp / Float(n)
+                points = newPoints
+                let avgDisp = points.isEmpty ? 0 : totalDisp / Float(points.count)
 
                 progressHandler?(StipplingProgress(
                     iteration: iter + 1,
@@ -116,7 +114,9 @@ public final class VoronoiStippler: Sendable {
 
     // MARK: — Rejection sampling
 
-    /// Sample N points from a density map using rejection sampling.
+    /// Sample up to `count` points with probability strictly proportional to
+    /// density. No acceptance floor and no uniform fallback: blank regions
+    /// get NO points, and a sparse image simply yields fewer points.
     private static func rejectionSample(densityMap: DensityMap, count: Int) -> [StipplePoint] {
         var points: [StipplePoint] = []
         points.reserveCapacity(count)
@@ -125,47 +125,20 @@ public final class VoronoiStippler: Sendable {
         // Find max density for rejection criterion
         var maxDensity: Float = 0
         for v in densityMap.pixels { if v > maxDensity { maxDensity = v } }
-        let normaliser: Float = maxDensity > 0 ? maxDensity : 1
+        guard maxDensity > 0 else { return [] }  // fully blank image
         var attempts = 0
-        let maxAttempts = count * 100
+        let maxAttempts = count * 200
 
         while points.count < count && attempts < maxAttempts {
             attempts += 1
             let fx = Float.random(in: 0..<Float(w))
             let fy = Float.random(in: 0..<Float(h))
-            let density = densityMap.interpolate(fx: fx, fy: fy) / normaliser
-            let threshold = max(density, 0.02) // minimum 2% chance to fill sparse images
-            if Float.random(in: 0..<1) < threshold {
+            let density = densityMap.interpolate(fx: fx, fy: fy) / maxDensity
+            if density > 0, Float.random(in: 0..<1) < density {
                 points.append(StipplePoint(x: fx, y: fy))
             }
         }
 
-        // If rejection sampling didn't get enough points (very sparse image),
-        // fill remaining slots uniformly.
-        while points.count < count {
-            points.append(StipplePoint(
-                x: Float.random(in: 0..<Float(w)),
-                y: Float.random(in: 0..<Float(h))
-            ))
-        }
-
         return points
-    }
-
-    /// Sample a single point. Returns nil if all attempts fail.
-    private static func singleRejectionSample(densityMap: DensityMap) -> StipplePoint? {
-        let w = densityMap.width; let h = densityMap.height
-        var maxDensity: Float = 0
-        for v in densityMap.pixels { if v > maxDensity { maxDensity = v } }
-        let normaliser: Float = maxDensity > 0 ? maxDensity : 1
-        for _ in 0..<200 {
-            let fx = Float.random(in: 0..<Float(w))
-            let fy = Float.random(in: 0..<Float(h))
-            let density = densityMap.interpolate(fx: fx, fy: fy) / normaliser
-            if Float.random(in: 0..<1) < max(density, 0.05) {
-                return StipplePoint(x: fx, y: fy)
-            }
-        }
-        return nil
     }
 }
