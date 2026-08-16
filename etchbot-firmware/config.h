@@ -70,9 +70,10 @@
 // Path Buffer
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 50KB RAM buffer for the drawing path.
+// 100KB RAM buffer for the drawing path.
 // nRF52840 has 256KB RAM; BLE stack + app overhead ≈ 80KB → ~176KB available.
-#define PATH_BUFFER_SIZE          (50u * 1024u)   // 51200 bytes
+// Increased from 50KB to support 10,000–20,000 point drawings.
+#define PATH_BUFFER_SIZE          (100u * 1024u)  // 102400 bytes
 
 // Binary path header size (matches iOS DrawingPathEncoder)
 #define PATH_HEADER_SIZE          12u
